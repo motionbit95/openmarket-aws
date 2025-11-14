@@ -7,8 +7,9 @@ kind: Kustomization
 
 namespace: openmarket-dev
 
-bases:
+resources:
   - ../../base
+  - namespace.yaml
 
 # ConfigMap Patches for Dev Environment
 configMapGenerator:
@@ -29,16 +30,16 @@ secretGenerator:
       - secrets.env
 
 # Resource Patches
-patchesStrategicMerge:
-  - backend-patch.yaml
-  - frontend-patch.yaml
-  - ingress-patch.yaml
+patches:
+  - path: backend-patch.yaml
+  - path: frontend-patch.yaml
+  - path: ingress-patch.yaml
 
 # Image Tags
 images:
-  - name: <AWS_ACCOUNT_ID>.dkr.ecr.ap-northeast-2.amazonaws.com/openmarket/backend
+  - name: 478266318018.dkr.ecr.ap-northeast-2.amazonaws.com/openmarket/backend
     newTag: dev-latest
-  - name: <AWS_ACCOUNT_ID>.dkr.ecr.ap-northeast-2.amazonaws.com/openmarket/frontend-web
+  - name: 478266318018.dkr.ecr.ap-northeast-2.amazonaws.com/openmarket/frontend-web
     newTag: dev-latest
 
 # Replicas
@@ -49,6 +50,7 @@ replicas:
     count: 2
 
 # Common Labels for Dev
-commonLabels:
-  environment: development
-  tier: dev
+labels:
+  - pairs:
+      environment: development
+      tier: dev

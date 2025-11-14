@@ -35,7 +35,12 @@ spec:
       initContainers:
         - name: db-migration
           image: {{ include "openmarket.backend.image" . }}
-          command: ['sh', '-c', 'npx prisma migrate deploy && npx prisma generate']
+          command:
+            - sh
+            - -c
+            - |
+              export DATABASE_URL="mysql://${username}:${password}@${host}:3306/{{ .Values.configMap.data.DB_NAME }}?schema=public"
+              npx prisma migrate deploy && npx prisma generate
           envFrom:
             - configMapRef:
                 name: {{ include "openmarket.fullname" . }}-config
@@ -54,6 +59,13 @@ spec:
             - name: http
               containerPort: {{ .Values.backend.service.targetPort }}
               protocol: TCP
+
+          command:
+            - sh
+            - -c
+            - |
+              export DATABASE_URL="mysql://${username}:${password}@${host}:3306/{{ .Values.configMap.data.DB_NAME }}?schema=public"
+              node index.js
 
           envFrom:
             - configMapRef:

@@ -10,24 +10,38 @@ global:
 backend:
   image:
     tag: dev-latest
-  replicas: 2
+  replicas: 1
+  resources:
+    requests:
+      memory: "64Mi"
+      cpu: "50m"
+    limits:
+      memory: "128Mi"
+      cpu: "100m"
   env:
     NODE_ENV: "development"
     LOG_LEVEL: "debug"
   serviceAccount:
     annotations:
-      eks.amazonaws.com/role-arn: "arn:aws:iam::<AWS_ACCOUNT_ID>:role/openmarket-dev-backend-irsa"
+      eks.amazonaws.com/role-arn: "arn:aws:iam::478266318018:role/openmarket-dev-backend-irsa"
 
 frontend:
   image:
     tag: dev-latest
-  replicas: 2
+  replicas: 1
+  resources:
+    requests:
+      memory: "128Mi"
+      cpu: "50m"
+    limits:
+      memory: "256Mi"
+      cpu: "100m"
   env:
     NODE_ENV: "development"
     NEXT_PUBLIC_API_URL: "https://api.dev.openmarket.example.com"
   serviceAccount:
     annotations:
-      eks.amazonaws.com/role-arn: "arn:aws:iam::<AWS_ACCOUNT_ID>:role/openmarket-dev-frontend-irsa"
+      eks.amazonaws.com/role-arn: "arn:aws:iam::478266318018:role/openmarket-dev-frontend-irsa"
 
 ingress:
   annotations:
@@ -59,3 +73,4 @@ configMap:
   data:
     NODE_ENV: "development"
     LOG_LEVEL: "debug"
+    DB_NAME: "openmarket_dev"

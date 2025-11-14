@@ -7,8 +7,9 @@ kind: Kustomization
 
 namespace: openmarket-prod
 
-bases:
+resources:
   - ../../base
+  - namespace.yaml
 
 # ConfigMap for Production
 configMapGenerator:
@@ -21,16 +22,16 @@ configMapGenerator:
       - FRONTEND_URL=https://openmarket.example.com
 
 # Resource Patches for Production
-patchesStrategicMerge:
-  - backend-patch.yaml
-  - frontend-patch.yaml
-  - ingress-patch.yaml
+patches:
+  - path: backend-patch.yaml
+  - path: frontend-patch.yaml
+  - path: ingress-patch.yaml
 
 # Image Tags (specific version, not latest)
 images:
-  - name: <AWS_ACCOUNT_ID>.dkr.ecr.ap-northeast-2.amazonaws.com/openmarket/backend
+  - name: 478266318018.dkr.ecr.ap-northeast-2.amazonaws.com/openmarket/backend
     newTag: v1.0.0
-  - name: <AWS_ACCOUNT_ID>.dkr.ecr.ap-northeast-2.amazonaws.com/openmarket/frontend-web
+  - name: 478266318018.dkr.ecr.ap-northeast-2.amazonaws.com/openmarket/frontend-web
     newTag: v1.0.0
 
 # Replicas (production scale)
@@ -41,6 +42,7 @@ replicas:
     count: 3
 
 # Common Labels for Production
-commonLabels:
-  environment: production
-  tier: prod
+labels:
+  - pairs:
+      environment: production
+      tier: prod

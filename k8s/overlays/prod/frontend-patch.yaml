@@ -24,6 +24,7 @@ spec:
               value: "production"
             - name: NEXT_PUBLIC_API_URL
               value: "https://api.openmarket.example.com"
+              valueFrom: null
 ---
 apiVersion: autoscaling/v2
 kind: HorizontalPodAutoscaler

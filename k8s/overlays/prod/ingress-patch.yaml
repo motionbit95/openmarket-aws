@@ -10,7 +10,7 @@ metadata:
     alb.ingress.kubernetes.io/load-balancer-name: openmarket-prod-alb
     alb.ingress.kubernetes.io/tags: Environment=prod,Project=openmarket,Critical=true
     # Enable WAF for production
-    alb.ingress.kubernetes.io/wafv2-acl-arn: arn:aws:wafv2:ap-northeast-2:<AWS_ACCOUNT_ID>:regional/webacl/openmarket-prod-waf/<WAF_ID>
+    alb.ingress.kubernetes.io/wafv2-acl-arn: arn:aws:wafv2:ap-northeast-2:478266318018:regional/webacl/openmarket-prod-waf/<WAF_ID>
     # Enable AWS Shield for DDoS protection
     alb.ingress.kubernetes.io/shield-advanced-protection: "true"
 spec:

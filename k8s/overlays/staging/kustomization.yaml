@@ -7,8 +7,9 @@ kind: Kustomization
 
 namespace: openmarket-staging
 
-bases:
+resources:
   - ../../base
+  - namespace.yaml
 
 # ConfigMap for Staging
 configMapGenerator:
@@ -22,9 +23,9 @@ configMapGenerator:
 
 # Image Tags
 images:
-  - name: <AWS_ACCOUNT_ID>.dkr.ecr.ap-northeast-2.amazonaws.com/openmarket/backend
+  - name: 478266318018.dkr.ecr.ap-northeast-2.amazonaws.com/openmarket/backend
     newTag: staging-latest
-  - name: <AWS_ACCOUNT_ID>.dkr.ecr.ap-northeast-2.amazonaws.com/openmarket/frontend-web
+  - name: 478266318018.dkr.ecr.ap-northeast-2.amazonaws.com/openmarket/frontend-web
     newTag: staging-latest
 
 # Replicas (more than dev, less than prod)
@@ -35,6 +36,7 @@ replicas:
     count: 2
 
 # Common Labels for Staging
-commonLabels:
-  environment: staging
-  tier: staging
+labels:
+  - pairs:
+      environment: staging
+      tier: staging

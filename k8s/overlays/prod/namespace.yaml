@@ -1,0 +1,12 @@
+# ========================================
+# Production Namespace Configuration
+# ========================================
+
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: openmarket-prod
+  labels:
+    name: openmarket-prod
+    environment: production
+    project: openmarket

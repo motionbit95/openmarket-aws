@@ -44,8 +44,9 @@ spec:
       # Init Container - Database Migration
       initContainers:
         - name: db-migration
-          image: <AWS_ACCOUNT_ID>.dkr.ecr.ap-northeast-2.amazonaws.com/openmarket/backend:latest
-          command: ['sh', '-c', 'npx prisma migrate deploy && npx prisma generate']
+          image: 478266318018.dkr.ecr.ap-northeast-2.amazonaws.com/openmarket/backend:latest
+          command:
+            ["sh", "-c", "npx prisma migrate deploy && npx prisma generate"]
           envFrom:
             - configMapRef:
                 name: openmarket-config
@@ -63,7 +64,7 @@ spec:
 
       containers:
         - name: backend
-          image: <AWS_ACCOUNT_ID>.dkr.ecr.ap-northeast-2.amazonaws.com/openmarket/backend:latest
+          image: 478266318018.dkr.ecr.ap-northeast-2.amazonaws.com/openmarket/backend:latest
           imagePullPolicy: Always
 
           ports:
@@ -224,7 +225,7 @@ kind: ServiceAccount
 metadata:
   name: backend-sa
   annotations:
-    eks.amazonaws.com/role-arn: arn:aws:iam::<AWS_ACCOUNT_ID>:role/openmarket-dev-backend-irsa
+    eks.amazonaws.com/role-arn: arn:aws:iam::478266318018:role/openmarket-dev-backend-irsa
 ---
 # ========================================
 # Pod Disruption Budget

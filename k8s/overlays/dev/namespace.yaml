@@ -1,0 +1,12 @@
+# ========================================
+# Development Namespace Configuration
+# ========================================
+
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: openmarket-dev
+  labels:
+    name: openmarket-dev
+    environment: development
+    project: openmarket

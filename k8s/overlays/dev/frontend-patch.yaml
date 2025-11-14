@@ -24,3 +24,4 @@ spec:
               value: "development"
             - name: NEXT_PUBLIC_API_URL
               value: "https://api.dev.openmarket.example.com"
+              valueFrom: null

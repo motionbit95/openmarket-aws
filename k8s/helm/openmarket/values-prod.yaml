@@ -9,7 +9,7 @@ global:
 
 backend:
   image:
-    tag: v1.0.0  # Use specific versions in production, not latest
+    tag: v1.0.0 # Use specific versions in production, not latest
   replicas: 5
   resources:
     requests:
@@ -26,7 +26,7 @@ backend:
     LOG_LEVEL: "warn"
   serviceAccount:
     annotations:
-      eks.amazonaws.com/role-arn: "arn:aws:iam::<AWS_ACCOUNT_ID>:role/openmarket-prod-backend-irsa"
+      eks.amazonaws.com/role-arn: "arn:aws:iam::478266318018:role/openmarket-prod-backend-irsa"
 
 frontend:
   image:
@@ -47,13 +47,13 @@ frontend:
     NEXT_PUBLIC_API_URL: "https://api.openmarket.example.com"
   serviceAccount:
     annotations:
-      eks.amazonaws.com/role-arn: "arn:aws:iam::<AWS_ACCOUNT_ID>:role/openmarket-prod-frontend-irsa"
+      eks.amazonaws.com/role-arn: "arn:aws:iam::478266318018:role/openmarket-prod-frontend-irsa"
 
 ingress:
   annotations:
     alb.ingress.kubernetes.io/load-balancer-name: openmarket-prod-alb
     alb.ingress.kubernetes.io/tags: Environment=prod,Project=openmarket,Critical=true
-    alb.ingress.kubernetes.io/wafv2-acl-arn: arn:aws:wafv2:ap-northeast-2:<AWS_ACCOUNT_ID>:regional/webacl/openmarket-prod-waf/<WAF_ID>
+    alb.ingress.kubernetes.io/wafv2-acl-arn: arn:aws:wafv2:ap-northeast-2:478266318018:regional/webacl/openmarket-prod-waf/<WAF_ID>
     alb.ingress.kubernetes.io/shield-advanced-protection: "true"
   hosts:
     - host: openmarket.example.com
