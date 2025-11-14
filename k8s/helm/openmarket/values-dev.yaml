@@ -1,0 +1,61 @@
+# ========================================
+# Development Environment Values
+# ========================================
+
+global:
+  environment: dev
+  region: ap-northeast-2
+  clusterName: openmarket-dev-eks
+
+backend:
+  image:
+    tag: dev-latest
+  replicas: 2
+  env:
+    NODE_ENV: "development"
+    LOG_LEVEL: "debug"
+  serviceAccount:
+    annotations:
+      eks.amazonaws.com/role-arn: "arn:aws:iam::<AWS_ACCOUNT_ID>:role/openmarket-dev-backend-irsa"
+
+frontend:
+  image:
+    tag: dev-latest
+  replicas: 2
+  env:
+    NODE_ENV: "development"
+    NEXT_PUBLIC_API_URL: "https://api.dev.openmarket.example.com"
+  serviceAccount:
+    annotations:
+      eks.amazonaws.com/role-arn: "arn:aws:iam::<AWS_ACCOUNT_ID>:role/openmarket-dev-frontend-irsa"
+
+ingress:
+  annotations:
+    alb.ingress.kubernetes.io/load-balancer-name: openmarket-dev-alb
+    alb.ingress.kubernetes.io/tags: Environment=dev,Project=openmarket
+  hosts:
+    - host: dev.openmarket.example.com
+      paths:
+        - path: /
+          pathType: Prefix
+          backend: frontend
+    - host: api.dev.openmarket.example.com
+      paths:
+        - path: /
+          pathType: Prefix
+          backend: backend
+    - host: admin.dev.openmarket.example.com
+      paths:
+        - path: /
+          pathType: Prefix
+          backend: frontend
+    - host: seller.dev.openmarket.example.com
+      paths:
+        - path: /
+          pathType: Prefix
+          backend: frontend
+
+configMap:
+  data:
+    NODE_ENV: "development"
+    LOG_LEVEL: "debug"

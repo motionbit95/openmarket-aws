@@ -1,0 +1,40 @@
+# ========================================
+# Staging Environment Overlay
+# ========================================
+
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+
+namespace: openmarket-staging
+
+bases:
+  - ../../base
+
+# ConfigMap for Staging
+configMapGenerator:
+  - name: openmarket-config
+    behavior: merge
+    literals:
+      - NODE_ENV=production
+      - LOG_LEVEL=info
+      - API_URL=https://api.staging.openmarket.example.com
+      - FRONTEND_URL=https://staging.openmarket.example.com
+
+# Image Tags
+images:
+  - name: <AWS_ACCOUNT_ID>.dkr.ecr.ap-northeast-2.amazonaws.com/openmarket/backend
+    newTag: staging-latest
+  - name: <AWS_ACCOUNT_ID>.dkr.ecr.ap-northeast-2.amazonaws.com/openmarket/frontend-web
+    newTag: staging-latest
+
+# Replicas (more than dev, less than prod)
+replicas:
+  - name: backend-api
+    count: 3
+  - name: frontend-web
+    count: 2
+
+# Common Labels for Staging
+commonLabels:
+  environment: staging
+  tier: staging

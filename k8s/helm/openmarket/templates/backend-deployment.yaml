@@ -1,0 +1,117 @@
+{{- if .Values.backend.enabled }}
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ .Values.backend.name }}
+  labels:
+    {{- include "openmarket.backend.labels" . | nindent 4 }}
+spec:
+  replicas: {{ .Values.backend.replicas }}
+  strategy:
+    type: RollingUpdate
+    rollingUpdate:
+      maxSurge: 1
+      maxUnavailable: 0
+  selector:
+    matchLabels:
+      app: {{ .Values.backend.name }}
+  template:
+    metadata:
+      labels:
+        app: {{ .Values.backend.name }}
+        tier: backend
+        component: api
+      annotations:
+        {{- if .Values.monitoring.enabled }}
+        prometheus.io/scrape: "{{ .Values.monitoring.prometheus.scrape }}"
+        prometheus.io/port: "{{ .Values.monitoring.prometheus.port }}"
+        prometheus.io/path: "{{ .Values.monitoring.prometheus.path }}"
+        {{- end }}
+    spec:
+      serviceAccountName: {{ include "openmarket.backend.serviceAccountName" . }}
+      securityContext:
+        {{- toYaml .Values.securityContext | nindent 8 }}
+
+      initContainers:
+        - name: db-migration
+          image: {{ include "openmarket.backend.image" . }}
+          command: ['sh', '-c', 'npx prisma migrate deploy && npx prisma generate']
+          envFrom:
+            - configMapRef:
+                name: {{ include "openmarket.fullname" . }}-config
+            - secretRef:
+                name: db-credentials
+            - secretRef:
+                name: redis-credentials
+          securityContext:
+            {{- toYaml .Values.podSecurityContext | nindent 12 }}
+
+      containers:
+        - name: backend
+          image: {{ include "openmarket.backend.image" . }}
+          imagePullPolicy: {{ .Values.imageRegistry.pullPolicy }}
+          ports:
+            - name: http
+              containerPort: {{ .Values.backend.service.targetPort }}
+              protocol: TCP
+
+          envFrom:
+            - configMapRef:
+                name: {{ include "openmarket.fullname" . }}-config
+            - secretRef:
+                name: db-credentials
+            - secretRef:
+                name: redis-credentials
+
+          env:
+            {{- range $key, $value := .Values.backend.env }}
+            - name: {{ $key }}
+              value: {{ $value | quote }}
+            {{- end }}
+            - name: POD_NAME
+              valueFrom:
+                fieldRef:
+                  fieldPath: metadata.name
+            - name: POD_NAMESPACE
+              valueFrom:
+                fieldRef:
+                  fieldPath: metadata.namespace
+            - name: POD_IP
+              valueFrom:
+                fieldRef:
+                  fieldPath: status.podIP
+
+          livenessProbe:
+            {{- toYaml .Values.backend.livenessProbe | nindent 12 }}
+
+          readinessProbe:
+            {{- toYaml .Values.backend.readinessProbe | nindent 12 }}
+
+          resources:
+            {{- toYaml .Values.backend.resources | nindent 12 }}
+
+          securityContext:
+            {{- toYaml .Values.podSecurityContext | nindent 12 }}
+
+          volumeMounts:
+            - name: tmp
+              mountPath: /tmp
+            - name: app-logs
+              mountPath: /app/logs
+
+      volumes:
+        - name: tmp
+          emptyDir: {}
+        - name: app-logs
+          emptyDir: {}
+
+      {{- with .Values.affinity }}
+      affinity:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+
+      {{- with .Values.tolerations }}
+      tolerations:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+{{- end }}

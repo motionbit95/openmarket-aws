@@ -1,0 +1,273 @@
+# ========================================
+# OpenMarket Helm Chart Values
+# ========================================
+
+# Global Settings
+global:
+  environment: dev
+  region: ap-northeast-2
+  clusterName: openmarket-dev-eks
+
+# Image Registry
+imageRegistry:
+  url: <AWS_ACCOUNT_ID>.dkr.ecr.ap-northeast-2.amazonaws.com
+  pullPolicy: Always
+
+# Backend API
+backend:
+  enabled: true
+  name: backend-api
+
+  image:
+    repository: openmarket/backend
+    tag: latest
+
+  replicas: 3
+
+  resources:
+    requests:
+      memory: "256Mi"
+      cpu: "250m"
+    limits:
+      memory: "512Mi"
+      cpu: "500m"
+
+  service:
+    type: ClusterIP
+    port: 3000
+    targetPort: 3000
+
+  autoscaling:
+    enabled: true
+    minReplicas: 3
+    maxReplicas: 20
+    targetCPUUtilizationPercentage: 70
+    targetMemoryUtilizationPercentage: 80
+
+  livenessProbe:
+    httpGet:
+      path: /health
+      port: 3000
+    initialDelaySeconds: 60
+    periodSeconds: 10
+
+  readinessProbe:
+    httpGet:
+      path: /health/ready
+      port: 3000
+    initialDelaySeconds: 30
+    periodSeconds: 5
+
+  env:
+    NODE_ENV: "production"
+    API_PORT: "3000"
+    LOG_LEVEL: "info"
+
+  # IRSA Role ARN (from Terraform)
+  serviceAccount:
+    create: true
+    name: backend-sa
+    annotations:
+      eks.amazonaws.com/role-arn: ""  # Will be set from values override
+
+# Frontend Web
+frontend:
+  enabled: true
+  name: frontend-web
+
+  image:
+    repository: openmarket/frontend-web
+    tag: latest
+
+  replicas: 2
+
+  resources:
+    requests:
+      memory: "128Mi"
+      cpu: "100m"
+    limits:
+      memory: "256Mi"
+      cpu: "200m"
+
+  service:
+    type: ClusterIP
+    port: 3000
+    targetPort: 3000
+
+  autoscaling:
+    enabled: true
+    minReplicas: 2
+    maxReplicas: 10
+    targetCPUUtilizationPercentage: 70
+    targetMemoryUtilizationPercentage: 80
+
+  livenessProbe:
+    httpGet:
+      path: /api/health
+      port: 3000
+    initialDelaySeconds: 30
+    periodSeconds: 10
+
+  readinessProbe:
+    httpGet:
+      path: /api/health
+      port: 3000
+    initialDelaySeconds: 10
+    periodSeconds: 5
+
+  env:
+    NODE_ENV: "production"
+    NEXT_PUBLIC_API_URL: "https://api.dev.openmarket.example.com"
+
+  serviceAccount:
+    create: true
+    name: frontend-sa
+    annotations:
+      eks.amazonaws.com/role-arn: ""
+
+# Ingress Configuration
+ingress:
+  enabled: true
+  className: alb
+
+  annotations:
+    alb.ingress.kubernetes.io/scheme: internet-facing
+    alb.ingress.kubernetes.io/target-type: ip
+    alb.ingress.kubernetes.io/listen-ports: '[{"HTTP": 80}, {"HTTPS": 443}]'
+    alb.ingress.kubernetes.io/ssl-redirect: '443'
+    alb.ingress.kubernetes.io/healthcheck-protocol: HTTP
+    alb.ingress.kubernetes.io/healthcheck-path: /health
+    alb.ingress.kubernetes.io/healthcheck-interval-seconds: '15'
+    alb.ingress.kubernetes.io/healthcheck-timeout-seconds: '5'
+
+  hosts:
+    - host: dev.openmarket.example.com
+      paths:
+        - path: /
+          pathType: Prefix
+          backend: frontend
+    - host: api.dev.openmarket.example.com
+      paths:
+        - path: /
+          pathType: Prefix
+          backend: backend
+    - host: admin.dev.openmarket.example.com
+      paths:
+        - path: /
+          pathType: Prefix
+          backend: frontend
+    - host: seller.dev.openmarket.example.com
+      paths:
+        - path: /
+          pathType: Prefix
+          backend: frontend
+
+  tls:
+    - hosts:
+        - dev.openmarket.example.com
+        - api.dev.openmarket.example.com
+        - admin.dev.openmarket.example.com
+        - seller.dev.openmarket.example.com
+
+# ConfigMap
+configMap:
+  create: true
+  data:
+    NODE_ENV: "production"
+    DB_PORT: "3306"
+    DB_NAME: "openmarket"
+    REDIS_PORT: "6379"
+    API_PORT: "3000"
+    FRONTEND_PORT: "3000"
+    SESSION_NAME: "openmarket.sid"
+    CORS_ORIGIN: "https://openmarket.example.com"
+    MAX_FILE_SIZE: "10485760"
+    DEFAULT_PAGE_SIZE: "20"
+    MAX_PAGE_SIZE: "100"
+    LOG_LEVEL: "info"
+    LOG_FORMAT: "json"
+
+# Secrets (External Secrets Operator)
+externalSecrets:
+  enabled: true
+  refreshInterval: 1h
+  secretStore:
+    name: aws-secrets-manager
+    kind: SecretStore
+    region: ap-northeast-2
+
+  secrets:
+    - name: db-credentials
+      remoteSecretName: openmarket-dev-rds-credentials
+      keys:
+        - username
+        - password
+        - host
+    - name: redis-credentials
+      remoteSecretName: openmarket-dev-elasticache-credentials
+      keys:
+        - auth_token
+        - configuration_endpoint
+
+# Network Policies
+networkPolicy:
+  enabled: true
+  policyTypes:
+    - Ingress
+    - Egress
+
+# Pod Disruption Budget
+podDisruptionBudget:
+  enabled: true
+  backend:
+    minAvailable: 2
+  frontend:
+    minAvailable: 1
+
+# Security Context
+securityContext:
+  runAsNonRoot: true
+  runAsUser: 1001
+  fsGroup: 1001
+  seccompProfile:
+    type: RuntimeDefault
+
+# Pod Security Context
+podSecurityContext:
+  allowPrivilegeEscalation: false
+  runAsNonRoot: true
+  runAsUser: 1001
+  readOnlyRootFilesystem: false
+  capabilities:
+    drop:
+      - ALL
+
+# Affinity Rules
+affinity:
+  podAntiAffinity:
+    preferredDuringSchedulingIgnoredDuringExecution:
+      - weight: 100
+        podAffinityTerm:
+          topologyKey: topology.kubernetes.io/zone
+      - weight: 50
+        podAffinityTerm:
+          topologyKey: kubernetes.io/hostname
+
+# Tolerations
+tolerations:
+  - key: "node.kubernetes.io/not-ready"
+    operator: "Exists"
+    effect: "NoExecute"
+    tolerationSeconds: 300
+  - key: "node.kubernetes.io/unreachable"
+    operator: "Exists"
+    effect: "NoExecute"
+    tolerationSeconds: 300
+
+# Monitoring
+monitoring:
+  enabled: true
+  prometheus:
+    scrape: true
+    port: 3000
+    path: /metrics

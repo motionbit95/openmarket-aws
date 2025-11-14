@@ -1,0 +1,34 @@
+# ========================================
+# Backend Deployment Patches for Production
+# ========================================
+
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: backend-api
+spec:
+  replicas: 5
+  template:
+    spec:
+      containers:
+        - name: backend
+          resources:
+            requests:
+              memory: "512Mi"
+              cpu: "500m"
+            limits:
+              memory: "1Gi"
+              cpu: "1000m"
+          env:
+            - name: NODE_ENV
+              value: "production"
+            - name: LOG_LEVEL
+              value: "warn"
+---
+apiVersion: autoscaling/v2
+kind: HorizontalPodAutoscaler
+metadata:
+  name: backend-api-hpa
+spec:
+  minReplicas: 5
+  maxReplicas: 50

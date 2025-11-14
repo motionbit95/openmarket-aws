@@ -1,0 +1,30 @@
+# ========================================
+# Namespace Configuration
+# ========================================
+
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: openmarket-dev
+  labels:
+    name: openmarket-dev
+    environment: development
+    project: openmarket
+---
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: openmarket-staging
+  labels:
+    name: openmarket-staging
+    environment: staging
+    project: openmarket
+---
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: openmarket-prod
+  labels:
+    name: openmarket-prod
+    environment: production
+    project: openmarket

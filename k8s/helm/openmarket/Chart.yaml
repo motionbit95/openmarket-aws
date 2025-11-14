@@ -1,0 +1,23 @@
+apiVersion: v2
+name: openmarket
+description: A Helm chart for OpenMarket e-commerce platform on AWS EKS
+type: application
+version: 1.0.0
+appVersion: "1.0.0"
+
+maintainers:
+  - name: OpenMarket Team
+    email: dev@openmarket.example.com
+
+keywords:
+  - ecommerce
+  - marketplace
+  - aws
+  - eks
+  - nodejs
+  - nextjs
+
+sources:
+  - https://github.com/openmarket/openmarket-aws
+
+dependencies: []

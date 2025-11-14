@@ -1,0 +1,46 @@
+# ========================================
+# Production Environment Overlay
+# ========================================
+
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+
+namespace: openmarket-prod
+
+bases:
+  - ../../base
+
+# ConfigMap for Production
+configMapGenerator:
+  - name: openmarket-config
+    behavior: merge
+    literals:
+      - NODE_ENV=production
+      - LOG_LEVEL=warn
+      - API_URL=https://api.openmarket.example.com
+      - FRONTEND_URL=https://openmarket.example.com
+
+# Resource Patches for Production
+patchesStrategicMerge:
+  - backend-patch.yaml
+  - frontend-patch.yaml
+  - ingress-patch.yaml
+
+# Image Tags (specific version, not latest)
+images:
+  - name: <AWS_ACCOUNT_ID>.dkr.ecr.ap-northeast-2.amazonaws.com/openmarket/backend
+    newTag: v1.0.0
+  - name: <AWS_ACCOUNT_ID>.dkr.ecr.ap-northeast-2.amazonaws.com/openmarket/frontend-web
+    newTag: v1.0.0
+
+# Replicas (production scale)
+replicas:
+  - name: backend-api
+    count: 5
+  - name: frontend-web
+    count: 3
+
+# Common Labels for Production
+commonLabels:
+  environment: production
+  tier: prod

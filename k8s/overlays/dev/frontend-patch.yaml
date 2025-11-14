@@ -1,0 +1,26 @@
+# ========================================
+# Frontend Deployment Patches for Dev
+# ========================================
+
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: frontend-web
+spec:
+  replicas: 2
+  template:
+    spec:
+      containers:
+        - name: frontend
+          resources:
+            requests:
+              memory: "128Mi"
+              cpu: "100m"
+            limits:
+              memory: "256Mi"
+              cpu: "200m"
+          env:
+            - name: NODE_ENV
+              value: "development"
+            - name: NEXT_PUBLIC_API_URL
+              value: "https://api.dev.openmarket.example.com"

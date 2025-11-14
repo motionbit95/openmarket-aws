@@ -1,0 +1,29 @@
+# ========================================
+# Base Kustomization
+# ========================================
+
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+
+namespace: openmarket-dev
+
+resources:
+  - namespace.yaml
+  - configmap.yaml
+  - secrets.yaml
+  - backend-deployment.yaml
+  - backend-hpa.yaml
+  - frontend-deployment.yaml
+  - frontend-hpa.yaml
+  - ingress.yaml
+  - network-policy.yaml
+
+# Common Labels
+commonLabels:
+  app.kubernetes.io/managed-by: kustomize
+  app.kubernetes.io/part-of: openmarket
+
+# Common Annotations
+commonAnnotations:
+  managed-by: kustomize
+  documentation: https://github.com/openmarket/docs

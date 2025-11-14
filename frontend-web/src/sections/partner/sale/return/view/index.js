@@ -1,0 +1,1 @@
+export { PartnerReturnView } from './partner-return-view';

@@ -1,0 +1,789 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "mysql"
+  url      = env("DATABASE_URL")
+}
+
+model Cart {
+  id        BigInt     @id @default(autoincrement())
+  userId    BigInt
+  createdAt DateTime   @default(now())
+  updatedAt DateTime
+  users     users      @relation(fields: [userId], references: [id])
+  CartItem  CartItem[]
+
+  @@index([userId])
+}
+
+model CartItem {
+  id         BigInt      @id @default(autoincrement())
+  cartId     BigInt
+  productId  BigInt
+  skuId      BigInt?
+  quantity   Int         @default(1)
+  price      Float
+  createdAt  DateTime    @default(now())
+  updatedAt  DateTime
+  Cart       Cart        @relation(fields: [cartId], references: [id])
+  Product    Product     @relation(fields: [productId], references: [id])
+  ProductSKU ProductSKU? @relation(fields: [skuId], references: [id])
+
+  @@index([cartId])
+  @@index([productId])
+  @@index([skuId])
+}
+
+model CommissionPolicy {
+  id             BigInt    @id @default(autoincrement())
+  name           String
+  categoryCode   String?
+  sellerId       BigInt?
+  commissionRate Float
+  minAmount      Float?
+  maxAmount      Float?
+  isActive       Boolean   @default(true)
+  effectiveDate  DateTime
+  endDate        DateTime?
+  createdAt      DateTime  @default(now())
+  updatedAt      DateTime
+  sellers        sellers?  @relation(fields: [sellerId], references: [id])
+
+  @@index([categoryCode, isActive])
+  @@index([effectiveDate])
+  @@index([sellerId, isActive])
+}
+
+model Coupon {
+  id                BigInt       @id @default(autoincrement())
+  title             String
+  content           String
+  coupon_type       String
+  discount_mode     String       @default("amount")
+  discount_amount   Int
+  discount_max      Int?
+  min_order_amount  Int?
+  total_count       Int
+  start_date        DateTime
+  end_date          DateTime
+  validity_type     String
+  validity_days     Int?
+  valid_from        DateTime?
+  valid_to          DateTime?
+  issued_by         String
+  issued_partner_id BigInt?
+  available_date    DateTime?
+  createdAt         DateTime     @default(now())
+  updatedAt         DateTime
+  sellers           sellers?     @relation(fields: [issued_partner_id], references: [id])
+  Order             Order[]
+  UserCoupon        UserCoupon[]
+
+  @@index([coupon_type])
+  @@index([issued_by])
+  @@index([issued_partner_id], map: "Coupon_issued_partner_id_fkey")
+  @@index([start_date, end_date])
+  @@index([valid_from, valid_to])
+}
+
+model ErrorReport {
+  id            BigInt    @id @default(autoincrement())
+  reporter_id   BigInt
+  reporter_type String
+  category      String
+  title         String?
+  content       String
+  status        String    @default("접수")
+  created_at    DateTime  @default(now())
+  updated_by    String?
+  updated_at    DateTime?
+  answer        String?
+  answeredAt    DateTime?
+}
+
+model FAQ {
+  id         BigInt   @id @default(autoincrement())
+  type       String
+  title      String
+  content    String
+  created_at DateTime @default(now())
+  updated_at DateTime
+}
+
+model Inquiry {
+  id         BigInt    @id @default(autoincrement())
+  senderId   BigInt
+  senderType String
+  title      String
+  content    String
+  status     String    @default("접수")
+  answer     String?
+  answeredAt DateTime?
+  createdAt  DateTime  @default(now())
+  updatedAt  DateTime?
+  productId  BigInt?
+  Product    Product?  @relation(fields: [productId], references: [id])
+
+  @@index([productId], map: "Inquiry_productId_fkey")
+}
+
+model Notice {
+  id         BigInt      @id @default(autoincrement())
+  type       Notice_type
+  title      String
+  content    String
+  is_pinned  Boolean     @default(false)
+  view_count Int         @default(0)
+  created_at DateTime    @default(now())
+  updated_at DateTime
+
+  @@index([is_pinned, created_at])
+  @@index([type])
+}
+
+model Order {
+  id             BigInt               @id @default(autoincrement())
+  orderNumber    String               @unique
+  userId         BigInt
+  recipient      String
+  phone          String
+  postcode       String
+  address1       String
+  address2       String?
+  deliveryMemo   String?
+  totalAmount    Float
+  discountAmount Float                @default(0)
+  deliveryFee    Float                @default(0)
+  finalAmount    Float
+  orderStatus    Order_orderStatus    @default(PENDING)
+  paymentStatus  Order_paymentStatus  @default(PENDING)
+  deliveryStatus Order_deliveryStatus @default(PREPARING)
+  paymentMethod  Order_paymentMethod
+  paymentId      String?
+  paidAt         DateTime?
+  usedCouponId   BigInt?
+  createdAt      DateTime             @default(now())
+  updatedAt      DateTime
+  Delivery       Delivery?
+  Coupon         Coupon?              @relation(fields: [usedCouponId], references: [id])
+  users          users                @relation(fields: [userId], references: [id])
+  OrderItem      OrderItem[]
+
+  @@index([createdAt])
+  @@index([orderNumber])
+  @@index([orderStatus])
+  @@index([paymentStatus])
+  @@index([usedCouponId], map: "Order_usedCouponId_fkey")
+  @@index([userId])
+}
+
+model Delivery {
+  id                    BigInt          @id @default(autoincrement())
+  orderId               BigInt          @unique
+  trackingNumber        String?
+  deliveryCompany       String?
+  status                Delivery_status @default(PREPARING)
+  estimatedDeliveryDate DateTime?
+  actualDeliveryDate    DateTime?
+  createdAt             DateTime        @default(now())
+  updatedAt             DateTime
+  Order                 Order           @relation(fields: [orderId], references: [id])
+
+  @@index([status])
+  @@index([trackingNumber])
+}
+
+model OrderItem {
+  id             BigInt      @id @default(autoincrement())
+  orderId        BigInt
+  productId      BigInt
+  skuId          BigInt?
+  quantity       Int
+  unitPrice      Float
+  totalPrice     Float
+  productName    String
+  skuCode        String?
+  skuDisplayName String?
+  optionSnapshot Json?
+  createdAt      DateTime    @default(now())
+  Order          Order       @relation(fields: [orderId], references: [id])
+  Product        Product     @relation(fields: [productId], references: [id])
+  ProductSKU     ProductSKU? @relation(fields: [skuId], references: [id])
+
+  @@index([orderId])
+  @@index([productId])
+  @@index([skuId])
+}
+
+model Product {
+  id                   BigInt                 @id @default(autoincrement())
+  sellerId             BigInt
+  displayName          String
+  internalName         String
+  keywords             String
+  categoryCode         String
+  brand                String
+  manufacturer         String
+  taxIncluded          Boolean
+  saleStatus           Product_saleStatus
+  displayStatus        Product_displayStatus
+  stockQuantity        Int
+  saleStartDate        DateTime?
+  saleEndDate          DateTime?
+  description          String
+  createdAt            DateTime               @default(now())
+  updatedAt            DateTime
+  refundNotice         String?                @db.Text
+  isSingleProduct      Boolean                @default(true)
+  CartItem             CartItem[]
+  Inquiry              Inquiry[]
+  OrderItem            OrderItem[]
+  ProductDelivery      ProductDelivery?
+  ProductImage         ProductImage[]
+  ProductInfoNotice    ProductInfoNotice[]
+  ProductOptionGroup   ProductOptionGroup[]
+  ProductPrice         ProductPrice?
+  ProductReturn        ProductReturn?
+  ProductSKU           ProductSKU[]
+  Review               Review[]
+  UserLikeProduct      UserLikeProduct[]
+  user_recently_viewed user_recently_viewed[]
+
+  @@index([categoryCode])
+  @@index([createdAt])
+  @@index([displayName])
+  @@index([saleStatus, displayStatus])
+  @@index([sellerId])
+}
+
+model ProductDelivery {
+  id                       BigInt  @id @default(autoincrement())
+  productId                BigInt  @unique
+  originAddress            String
+  deliveryMethod           String
+  isBundle                 Boolean @default(false)
+  bundleCondition          String?
+  isIslandAvailable        Boolean @default(false)
+  islandCondition          String?
+  courier                  String
+  deliveryFeeType          String
+  deliveryFee              Float
+  deliveryTime             String
+  conditionalFreeMinAmount Float?
+  Product                  Product @relation(fields: [productId], references: [id])
+}
+
+model ProductImage {
+  id        BigInt  @id @default(autoincrement())
+  productId BigInt
+  url       String
+  isMain    Boolean
+  sortOrder Int
+  Product   Product @relation(fields: [productId], references: [id])
+
+  @@index([productId], map: "ProductImage_productId_fkey")
+}
+
+model ProductInfoNotice {
+  id        BigInt  @id @default(autoincrement())
+  productId BigInt
+  name      String
+  value     String
+  Product   Product @relation(fields: [productId], references: [id])
+
+  @@index([productId], map: "ProductInfoNotice_productId_fkey")
+}
+
+model ProductOptionGroup {
+  id                 BigInt               @id @default(autoincrement())
+  productId          BigInt
+  name               String
+  displayName        String
+  required           Boolean              @default(true)
+  sortOrder          Int                  @default(0)
+  createdAt          DateTime             @default(now())
+  Product            Product              @relation(fields: [productId], references: [id])
+  ProductOptionValue ProductOptionValue[]
+
+  @@index([productId, sortOrder])
+}
+
+model ProductOptionValue {
+  id                 BigInt             @id @default(autoincrement())
+  optionGroupId      BigInt
+  value              String
+  displayName        String
+  colorCode          String?
+  extraPrice         Float              @default(0)
+  sortOrder          Int                @default(0)
+  isAvailable        Boolean            @default(true)
+  createdAt          DateTime           @default(now())
+  ProductOptionGroup ProductOptionGroup @relation(fields: [optionGroupId], references: [id])
+  ProductSKUOption   ProductSKUOption[]
+
+  @@index([optionGroupId, sortOrder])
+}
+
+model ProductPrice {
+  id            BigInt  @id @default(autoincrement())
+  productId     BigInt  @unique
+  originalPrice Float
+  salePrice     Float
+  discountRate  Float
+  flexzonePrice Float
+  Product       Product @relation(fields: [productId], references: [id])
+}
+
+model ProductReturn {
+  id                  BigInt  @id @default(autoincrement())
+  productId           BigInt  @unique
+  returnAddress       String
+  initialShippingFee  Float
+  returnShippingFee   Float
+  exchangeShippingFee Float
+  Product             Product @relation(fields: [productId], references: [id])
+}
+
+model ProductSKU {
+  id               BigInt             @id @default(autoincrement())
+  productId        BigInt
+  skuCode          String             @unique
+  displayName      String
+  originalPrice    Float
+  salePrice        Float
+  discountRate     Float              @default(0)
+  stockQuantity    Int                @default(0)
+  reservedStock    Int                @default(0)
+  alertStock       Int                @default(5)
+  isActive         Boolean            @default(true)
+  isMain           Boolean            @default(false)
+  weight           Float?
+  barcode          String?
+  createdAt        DateTime           @default(now())
+  updatedAt        DateTime
+  CartItem         CartItem[]
+  OrderItem        OrderItem[]
+  Product          Product            @relation(fields: [productId], references: [id])
+  ProductSKUOption ProductSKUOption[]
+
+  @@index([productId, isActive])
+  @@index([skuCode])
+  @@index([stockQuantity])
+}
+
+model ProductSKUOption {
+  id                 BigInt             @id @default(autoincrement())
+  skuId              BigInt
+  optionValueId      BigInt
+  ProductOptionValue ProductOptionValue @relation(fields: [optionValueId], references: [id])
+  ProductSKU         ProductSKU         @relation(fields: [skuId], references: [id])
+
+  @@unique([skuId, optionValueId])
+  @@index([optionValueId], map: "ProductSKUOption_optionValueId_fkey")
+  @@index([skuId])
+}
+
+model Review {
+  id          BigInt        @id @default(autoincrement())
+  productId   BigInt
+  userId      BigInt
+  rating      Int
+  content     String
+  createdAt   DateTime      @default(now())
+  updatedAt   DateTime
+  Product     Product       @relation(fields: [productId], references: [id])
+  users       users         @relation(fields: [userId], references: [id])
+  ReviewImage ReviewImage[]
+
+  @@index([createdAt])
+  @@index([productId])
+  @@index([rating])
+  @@index([userId])
+}
+
+model ReviewImage {
+  id        BigInt @id @default(autoincrement())
+  reviewId  BigInt
+  url       String
+  sortOrder Int    @default(0)
+  Review    Review @relation(fields: [reviewId], references: [id])
+
+  @@index([reviewId])
+}
+
+model Settlement {
+  id                    BigInt            @id @default(autoincrement())
+  settlementPeriodId    BigInt
+  sellerId              BigInt
+  totalOrderAmount      Float
+  totalCommission       Float
+  totalDeliveryFee      Float
+  totalRefundAmount     Float
+  totalCancelAmount     Float
+  adjustmentAmount      Float             @default(0)
+  finalSettlementAmount Float
+  commissionRate        Float             @default(10)
+  status                Settlement_status @default(PENDING)
+  settledAt             DateTime?
+  memo                  String?           @db.Text
+  createdAt             DateTime          @default(now())
+  updatedAt             DateTime
+  sellers               sellers           @relation(fields: [sellerId], references: [id])
+  SettlementPeriod      SettlementPeriod  @relation(fields: [settlementPeriodId], references: [id])
+  SettlementItem        SettlementItem[]
+
+  @@unique([settlementPeriodId, sellerId])
+  @@index([sellerId, status])
+  @@index([settlementPeriodId])
+}
+
+model SettlementItem {
+  id               BigInt     @id @default(autoincrement())
+  settlementId     BigInt
+  orderId          BigInt
+  orderItemId      BigInt
+  productName      String
+  skuCode          String?
+  quantity         Int
+  unitPrice        Float
+  totalPrice       Float
+  commissionRate   Float
+  commissionAmount Float
+  deliveryFee      Float      @default(0)
+  settlementAmount Float
+  orderStatus      String
+  paymentStatus    String
+  createdAt        DateTime   @default(now())
+  Settlement       Settlement @relation(fields: [settlementId], references: [id])
+
+  @@index([orderId])
+  @@index([settlementId])
+}
+
+model SettlementPeriod {
+  id             BigInt                      @id @default(autoincrement())
+  periodType     SettlementPeriod_periodType
+  startDate      DateTime
+  endDate        DateTime
+  settlementDate DateTime
+  status         SettlementPeriod_status     @default(PREPARING)
+  createdAt      DateTime                    @default(now())
+  updatedAt      DateTime
+  Settlement     Settlement[]
+
+  @@index([periodType, startDate, endDate])
+  @@index([status])
+}
+
+model UserCoupon {
+  id        BigInt    @id @default(autoincrement())
+  userId    BigInt
+  couponId  BigInt
+  used      Boolean   @default(false)
+  usedAt    DateTime?
+  issuedAt  DateTime  @default(now())
+  expiresAt DateTime?
+  Coupon    Coupon    @relation(fields: [couponId], references: [id])
+  users     users     @relation(fields: [userId], references: [id])
+
+  @@unique([userId, couponId])
+  @@index([couponId], map: "UserCoupon_couponId_fkey")
+}
+
+model UserGuide {
+  id         BigInt   @id @default(autoincrement())
+  type       String
+  title      String
+  content    String
+  is_pinned  Boolean  @default(false)
+  view_count Int      @default(0)
+  created_at DateTime @default(now())
+  updated_at DateTime
+}
+
+model UserLikeProduct {
+  id        BigInt   @id @default(autoincrement())
+  userId    BigInt
+  productId BigInt
+  createdAt DateTime @default(now())
+  Product   Product  @relation(fields: [productId], references: [id])
+  users     users    @relation(fields: [userId], references: [id])
+
+  @@unique([userId, productId])
+  @@index([productId])
+}
+
+model attachments {
+  id           BigInt   @id @default(autoincrement())
+  target_type  String
+  target_id    BigInt
+  filename     String
+  url          String
+  s3_key       String?
+  filesize     Int?
+  mimetype     String?
+  image_type   String?
+  image_width  Int?
+  image_height Int?
+  created_at   DateTime @default(now())
+
+  @@index([target_type, target_id])
+  @@index([target_type, target_id, image_type])
+}
+
+model banners {
+  id           BigInt            @id @default(autoincrement())
+  attachmentId BigInt
+  url          String
+  ownerType    banners_ownerType
+  ownerId      String
+  createdAt    DateTime          @default(now())
+  updatedAt    DateTime
+}
+
+model email_verifications {
+  email   String   @id @unique @db.VarChar(100)
+  code    String   @db.VarChar(10)
+  expires DateTime
+}
+
+model sellers {
+  id                 BigInt             @id @default(autoincrement())
+  name               String             @db.VarChar(100)
+  email              String             @unique @db.VarChar(100)
+  shop_name          String?            @db.VarChar(100)
+  password           String?            @db.VarChar(100)
+  phone              String?            @db.VarChar(20)
+  business_number    String?            @db.VarChar(50)
+  bank_type          sellers_bank_type  @default(KB)
+  bank_account       String?            @db.VarChar(100)
+  depositor_name     String?            @db.VarChar(100)
+  ceo_name           String?            @db.VarChar(100)
+  created_at         DateTime           @default(now())
+  email_verified     Boolean            @default(false)
+  address1           String?
+  address2           String?
+  postcode           String?
+  onlinesales_number String?
+  CommissionPolicy   CommissionPolicy[]
+  Coupon             Coupon[]
+  Settlement         Settlement[]
+}
+
+model terms {
+  id             String     @id
+  type           terms_type
+  title          String     @db.VarChar(255)
+  content        String     @db.Text
+  effective_date DateTime
+  created_at     DateTime   @default(now())
+  updated_at     DateTime
+}
+
+model user_addresses {
+  id         BigInt   @id @default(autoincrement())
+  userId     BigInt
+  recipient  String   @db.VarChar(50)
+  phone      String   @db.VarChar(20)
+  postcode   String   @db.VarChar(10)
+  address1   String   @db.VarChar(255)
+  address2   String?  @db.VarChar(255)
+  isDefault  Boolean  @default(false)
+  memo       String?  @db.VarChar(255)
+  created_at DateTime @default(now())
+  updated_at DateTime
+  users      users    @relation(fields: [userId], references: [id])
+
+  @@index([userId])
+}
+
+model user_notifications {
+  id        BigInt                  @id @default(autoincrement())
+  userId    BigInt
+  type      user_notifications_type
+  title     String                  @db.VarChar(200)
+  message   String                  @db.Text
+  isRead    Boolean                 @default(false)
+  data      Json?
+  createdAt DateTime                @default(now())
+  readAt    DateTime?
+  users     users                   @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([type])
+  @@index([userId, createdAt])
+  @@index([userId, isRead])
+}
+
+model user_recently_viewed {
+  id        BigInt   @id @default(autoincrement())
+  userId    BigInt
+  productId BigInt
+  viewedAt  DateTime @default(now())
+  Product   Product  @relation(fields: [productId], references: [id], onDelete: Cascade)
+  users     users    @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, productId])
+  @@index([productId], map: "user_recently_viewed_productId_fkey")
+  @@index([userId, viewedAt])
+}
+
+model users {
+  id                   BigInt                 @id @default(autoincrement())
+  user_name            String                 @db.VarChar(50)
+  email                String                 @unique @db.VarChar(100)
+  password             String                 @db.VarChar(255)
+  phone                String?                @db.VarChar(20)
+  mileage              Int                    @default(0)
+  created_at           DateTime               @default(now())
+  updated_at           DateTime
+  Cart                 Cart[]
+  Order                Order[]
+  Review               Review[]
+  UserCoupon           UserCoupon[]
+  UserLikeProduct      UserLikeProduct[]
+  user_addresses       user_addresses[]
+  user_notifications   user_notifications[]
+  user_recently_viewed user_recently_viewed[]
+}
+
+enum Notice_type {
+  USER
+  SELLER
+}
+
+enum SettlementPeriod_periodType {
+  WEEKLY
+  MONTHLY
+}
+
+enum terms_type {
+  TERMS
+  PRIVACY
+  LOCATION
+  MARKETING
+  FEE
+}
+
+enum user_notifications_type {
+  ORDER_STATUS_CHANGED
+  PAYMENT_COMPLETED
+  SHIPPING_STARTED
+  DELIVERY_COMPLETED
+  PRODUCT_RESTOCKED
+  COUPON_ISSUED
+  COUPON_EXPIRING
+  REVIEW_REQUEST
+  PRICE_DROP
+  NEW_PRODUCT
+  INQUIRY_ANSWERED
+  SYSTEM_NOTICE
+}
+
+enum banners_ownerType {
+  ADVERTISER
+  SELLER
+}
+
+enum SettlementPeriod_status {
+  PREPARING
+  PROCESSING
+  COMPLETED
+  CANCELLED
+}
+
+enum sellers_bank_type {
+  KB
+  SH
+  HN
+  WR
+  IB
+  NH
+  KAKAOBANK
+  KBANK
+  IBK
+  SUHYUP
+  SC
+  CITI
+  DG
+  BS
+  GJ
+  JB
+  JJ
+  GN
+}
+
+enum Product_saleStatus {
+  WAITING
+  ON_SALE
+  OUT_OF_STOCK
+  PENDING
+  PAUSED
+  ENDED
+  BANNED
+}
+
+enum Product_displayStatus {
+  DISPLAYED
+  HIDDEN
+}
+
+enum Settlement_status {
+  PENDING
+  CALCULATING
+  COMPLETED
+  CANCELLED
+  ON_HOLD
+}
+
+enum Order_orderStatus {
+  PENDING
+  CONFIRMED
+  PREPARING
+  SHIPPED
+  DELIVERED
+  CANCELLED
+  CANCELLING
+  RETURNED
+  RETURNING
+  RETURN_APPROVED
+  RETURN_PICKUP_SCHEDULED
+  RETURN_INSPECTING
+  RETURN_REJECTED
+  REFUNDED
+}
+
+enum Order_paymentStatus {
+  PENDING
+  COMPLETED
+  FAILED
+  CANCELLED
+  REFUNDED
+}
+
+enum Order_deliveryStatus {
+  PREPARING
+  SHIPPED
+  DELIVERED
+  RETURNED
+}
+
+enum Order_paymentMethod {
+  CARD
+  BANK_TRANSFER
+  VIRTUAL_ACCOUNT
+  PHONE
+  KAKAO_PAY
+  NAVER_PAY
+  TOSS_PAY
+}
+
+enum Delivery_status {
+  PREPARING
+  SHIPPED
+  IN_TRANSIT
+  DELIVERED
+  FAILED
+  RETURNED
+}

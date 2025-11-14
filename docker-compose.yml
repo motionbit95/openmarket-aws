@@ -1,0 +1,242 @@
+# ========================================
+# Docker Compose for Local Development
+# Services: Backend API, Frontend Web, MySQL, Redis, LocalStack (AWS 시뮬레이션)
+# ========================================
+
+version: '3.8'
+
+services:
+  # ========================================
+  # Database Services
+  # ========================================
+
+  mysql:
+    image: mysql:8.0
+    container_name: openmarket-mysql
+    restart: unless-stopped
+    environment:
+      MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD:-rootpassword}
+      MYSQL_DATABASE: ${MYSQL_DATABASE:-openmarket}
+      MYSQL_USER: ${MYSQL_USER:-openmarket}
+      MYSQL_PASSWORD: ${MYSQL_PASSWORD:-openmarket123}
+    ports:
+      - "3306:3306"
+    volumes:
+      - mysql_data:/var/lib/mysql
+      - ./backend/prisma/init.sql:/docker-entrypoint-initdb.d/init.sql:ro
+    networks:
+      - openmarket-network
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost", "-u", "root", "-p${MYSQL_ROOT_PASSWORD:-rootpassword}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  redis:
+    image: redis:7-alpine
+    container_name: openmarket-redis
+    restart: unless-stopped
+    command: redis-server --requirepass ${REDIS_PASSWORD:-redis123}
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis_data:/data
+    networks:
+      - openmarket-network
+    healthcheck:
+      test: ["CMD", "redis-cli", "--raw", "incr", "ping"]
+      interval: 10s
+      timeout: 3s
+      retries: 5
+
+  # ========================================
+  # AWS Local Simulation (LocalStack)
+  # ========================================
+
+  localstack:
+    image: localstack/localstack:latest
+    container_name: openmarket-localstack
+    restart: unless-stopped
+    environment:
+      SERVICES: s3,sqs,sns,lambda,dynamodb,cloudwatch,events
+      DEBUG: 1
+      DATA_DIR: /tmp/localstack/data
+      LAMBDA_EXECUTOR: docker
+      DOCKER_HOST: unix:///var/run/docker.sock
+    ports:
+      - "4566:4566"      # LocalStack gateway
+      - "4571:4571"      # S3
+    volumes:
+      - localstack_data:/tmp/localstack
+      - /var/run/docker.sock:/var/run/docker.sock
+    networks:
+      - openmarket-network
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:4566/_localstack/health"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  # ========================================
+  # Backend API Server
+  # ========================================
+
+  backend:
+    image: node:20-alpine
+    container_name: openmarket-backend
+    restart: unless-stopped
+    working_dir: /app
+    environment:
+      NODE_ENV: development
+      PORT: 3000
+
+      # Database
+      DATABASE_URL: mysql://${MYSQL_USER:-openmarket}:${MYSQL_PASSWORD:-openmarket123}@mysql:3306/${MYSQL_DATABASE:-openmarket}
+
+      # Redis
+      REDIS_HOST: redis
+      REDIS_PORT: 6379
+      REDIS_PASSWORD: ${REDIS_PASSWORD:-redis123}
+
+      # JWT
+      JWT_SECRET: ${JWT_SECRET:-your-super-secret-jwt-key-change-in-production}
+      JWT_EXPIRES_IN: ${JWT_EXPIRES_IN:-7d}
+
+      # AWS (LocalStack)
+      AWS_ENDPOINT: http://localstack:4566
+      AWS_REGION: ap-northeast-2
+      AWS_ACCESS_KEY_ID: test
+      AWS_SECRET_ACCESS_KEY: test
+      S3_BUCKET_NAME: openmarket-uploads
+
+      # Email (for development, use MailHog or similar)
+      SMTP_HOST: ${SMTP_HOST:-localhost}
+      SMTP_PORT: ${SMTP_PORT:-1025}
+      SMTP_USER: ${SMTP_USER:-}
+      SMTP_PASSWORD: ${SMTP_PASSWORD:-}
+
+    ports:
+      - "3001:3000"
+    volumes:
+      # For development: mount source code for hot reload
+      - ./backend:/app
+      - /app/node_modules
+    depends_on:
+      mysql:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    networks:
+      - openmarket-network
+    command: sh -c "npm install && npx prisma generate && npm run dev"
+
+  # ========================================
+  # Frontend Web (Next.js)
+  # ========================================
+
+  frontend-web:
+    build:
+      context: ./frontend-web
+      dockerfile: Dockerfile
+      target: runner
+    container_name: openmarket-frontend-web
+    restart: unless-stopped
+    environment:
+      NODE_ENV: development
+      NEXT_PUBLIC_API_URL: http://localhost:3001
+      NEXT_PUBLIC_WS_URL: ws://localhost:3001
+
+      # User Portal
+      NEXT_PUBLIC_USER_URL: http://localhost:3000
+
+      # Admin Portal
+      NEXT_PUBLIC_ADMIN_URL: http://localhost:3000/admin
+
+      # Seller Portal
+      NEXT_PUBLIC_SELLER_URL: http://localhost:3000/seller
+
+    ports:
+      - "3000:3000"
+    volumes:
+      # For development: mount source code
+      - ./frontend-web:/app
+      - /app/node_modules
+      - /app/.next
+    depends_on:
+      - backend
+    networks:
+      - openmarket-network
+    command: npm run dev
+
+  # ========================================
+  # Nginx Reverse Proxy (Optional)
+  # ========================================
+
+  nginx:
+    image: nginx:alpine
+    container_name: openmarket-nginx
+    restart: unless-stopped
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - ./nginx/nginx.conf:/etc/nginx/nginx.conf:ro
+      - ./nginx/conf.d:/etc/nginx/conf.d:ro
+    depends_on:
+      - backend
+      - frontend-web
+    networks:
+      - openmarket-network
+
+  # ========================================
+  # Development Tools
+  # ========================================
+
+  # Adminer (Database GUI)
+  adminer:
+    image: adminer:latest
+    container_name: openmarket-adminer
+    restart: unless-stopped
+    ports:
+      - "8080:8080"
+    environment:
+      ADMINER_DEFAULT_SERVER: mysql
+    depends_on:
+      - mysql
+    networks:
+      - openmarket-network
+
+  # Redis Commander (Redis GUI)
+  redis-commander:
+    image: rediscommander/redis-commander:latest
+    container_name: openmarket-redis-commander
+    restart: unless-stopped
+    environment:
+      REDIS_HOSTS: local:redis:6379:0:${REDIS_PASSWORD:-redis123}
+    ports:
+      - "8081:8081"
+    depends_on:
+      - redis
+    networks:
+      - openmarket-network
+
+# ========================================
+# Networks
+# ========================================
+
+networks:
+  openmarket-network:
+    driver: bridge
+    name: openmarket-network
+
+# ========================================
+# Volumes
+# ========================================
+
+volumes:
+  mysql_data:
+    name: openmarket-mysql-data
+  redis_data:
+    name: openmarket-redis-data
+  localstack_data:
+    name: openmarket-localstack-data

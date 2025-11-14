@@ -1,0 +1,195 @@
+# ========================================
+# Frontend Web Deployment
+# ========================================
+
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: frontend-web
+  labels:
+    app: frontend-web
+    tier: frontend
+    component: web
+spec:
+  replicas: 2
+  strategy:
+    type: RollingUpdate
+    rollingUpdate:
+      maxSurge: 1
+      maxUnavailable: 0
+  selector:
+    matchLabels:
+      app: frontend-web
+  template:
+    metadata:
+      labels:
+        app: frontend-web
+        tier: frontend
+        component: web
+    spec:
+      serviceAccountName: frontend-sa
+
+      # Security Context
+      securityContext:
+        runAsNonRoot: true
+        runAsUser: 1001
+        fsGroup: 1001
+        seccompProfile:
+          type: RuntimeDefault
+
+      containers:
+        - name: frontend
+          image: <AWS_ACCOUNT_ID>.dkr.ecr.ap-northeast-2.amazonaws.com/openmarket/frontend-web:latest
+          imagePullPolicy: Always
+
+          ports:
+            - name: http
+              containerPort: 3000
+              protocol: TCP
+
+          # Environment Variables
+          env:
+            - name: NODE_ENV
+              value: "production"
+            - name: NEXT_PUBLIC_API_URL
+              valueFrom:
+                configMapKeyRef:
+                  name: openmarket-config
+                  key: API_URL
+            - name: NEXT_PUBLIC_CLOUDFRONT_DOMAIN
+              valueFrom:
+                secretKeyRef:
+                  name: openmarket-secrets
+                  key: CLOUDFRONT_DOMAIN
+            - name: POD_NAME
+              valueFrom:
+                fieldRef:
+                  fieldPath: metadata.name
+
+          # Health Checks
+          livenessProbe:
+            httpGet:
+              path: /api/health
+              port: 3000
+            initialDelaySeconds: 30
+            periodSeconds: 10
+            timeoutSeconds: 5
+            failureThreshold: 3
+
+          readinessProbe:
+            httpGet:
+              path: /api/health
+              port: 3000
+            initialDelaySeconds: 10
+            periodSeconds: 5
+            timeoutSeconds: 3
+            failureThreshold: 3
+
+          startupProbe:
+            httpGet:
+              path: /api/health
+              port: 3000
+            initialDelaySeconds: 0
+            periodSeconds: 10
+            timeoutSeconds: 3
+            failureThreshold: 30
+
+          # Resource Limits
+          resources:
+            requests:
+              memory: "128Mi"
+              cpu: "100m"
+            limits:
+              memory: "256Mi"
+              cpu: "200m"
+
+          # Security Context
+          securityContext:
+            allowPrivilegeEscalation: false
+            runAsNonRoot: true
+            runAsUser: 1001
+            readOnlyRootFilesystem: false
+            capabilities:
+              drop:
+                - ALL
+
+          # Volume Mounts
+          volumeMounts:
+            - name: tmp
+              mountPath: /tmp
+            - name: nextjs-cache
+              mountPath: /app/.next/cache
+
+      # Volumes
+      volumes:
+        - name: tmp
+          emptyDir: {}
+        - name: nextjs-cache
+          emptyDir: {}
+
+      # Node Affinity
+      affinity:
+        podAntiAffinity:
+          preferredDuringSchedulingIgnoredDuringExecution:
+            - weight: 100
+              podAffinityTerm:
+                labelSelector:
+                  matchExpressions:
+                    - key: app
+                      operator: In
+                      values:
+                        - frontend-web
+                topologyKey: topology.kubernetes.io/zone
+
+      # Tolerations
+      tolerations:
+        - key: "node.kubernetes.io/not-ready"
+          operator: "Exists"
+          effect: "NoExecute"
+          tolerationSeconds: 300
+---
+# ========================================
+# Frontend Web Service
+# ========================================
+
+apiVersion: v1
+kind: Service
+metadata:
+  name: frontend-web
+  labels:
+    app: frontend-web
+    tier: frontend
+spec:
+  type: ClusterIP
+  ports:
+    - name: http
+      port: 3000
+      targetPort: 3000
+      protocol: TCP
+  selector:
+    app: frontend-web
+---
+# ========================================
+# Frontend Service Account (for IRSA)
+# ========================================
+
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: frontend-sa
+  annotations:
+    eks.amazonaws.com/role-arn: arn:aws:iam::<AWS_ACCOUNT_ID>:role/openmarket-dev-frontend-irsa
+---
+# ========================================
+# Pod Disruption Budget
+# ========================================
+
+apiVersion: policy/v1
+kind: PodDisruptionBudget
+metadata:
+  name: frontend-web-pdb
+spec:
+  minAvailable: 1
+  selector:
+    matchLabels:
+      app: frontend-web

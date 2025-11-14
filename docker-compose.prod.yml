@@ -1,0 +1,104 @@
+# ========================================
+# Docker Compose for Production Simulation
+# Use this to test production builds locally
+# ========================================
+
+version: '3.8'
+
+services:
+  # ========================================
+  # Backend API Server (Production Build)
+  # ========================================
+
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+      target: production
+    container_name: openmarket-backend-prod
+    restart: always
+    environment:
+      NODE_ENV: production
+      PORT: 3000
+      DATABASE_URL: ${DATABASE_URL}
+      REDIS_HOST: redis
+      REDIS_PORT: 6379
+      REDIS_PASSWORD: ${REDIS_PASSWORD}
+      JWT_SECRET: ${JWT_SECRET}
+      JWT_EXPIRES_IN: 7d
+      AWS_REGION: ap-northeast-2
+      S3_BUCKET_NAME: ${S3_BUCKET_NAME}
+    ports:
+      - "3001:3000"
+    deploy:
+      replicas: 3
+      resources:
+        limits:
+          cpus: '0.5'
+          memory: 512M
+        reservations:
+          cpus: '0.25'
+          memory: 256M
+    networks:
+      - openmarket-network
+    healthcheck:
+      test: ["CMD", "node", "-e", "require('http').get('http://localhost:3000/health', (r) => {process.exit(r.statusCode === 200 ? 0 : 1)})"]
+      interval: 30s
+      timeout: 3s
+      retries: 3
+      start_period: 40s
+
+  # ========================================
+  # Frontend Web (Production Build)
+  # ========================================
+
+  frontend-web:
+    build:
+      context: ./frontend-web
+      dockerfile: Dockerfile
+      target: runner
+    container_name: openmarket-frontend-prod
+    restart: always
+    environment:
+      NODE_ENV: production
+      NEXT_PUBLIC_API_URL: ${NEXT_PUBLIC_API_URL}
+      NEXT_PUBLIC_WS_URL: ${NEXT_PUBLIC_WS_URL}
+    ports:
+      - "3000:3000"
+    deploy:
+      replicas: 2
+      resources:
+        limits:
+          cpus: '0.5'
+          memory: 512M
+        reservations:
+          cpus: '0.25'
+          memory: 256M
+    networks:
+      - openmarket-network
+    depends_on:
+      - backend
+
+  # ========================================
+  # Nginx Load Balancer
+  # ========================================
+
+  nginx:
+    image: nginx:alpine
+    container_name: openmarket-nginx-prod
+    restart: always
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - ./nginx/nginx.prod.conf:/etc/nginx/nginx.conf:ro
+      - ./nginx/ssl:/etc/nginx/ssl:ro
+    depends_on:
+      - backend
+      - frontend-web
+    networks:
+      - openmarket-network
+
+networks:
+  openmarket-network:
+    driver: bridge

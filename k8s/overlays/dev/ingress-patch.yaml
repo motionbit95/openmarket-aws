@@ -1,0 +1,17 @@
+# ========================================
+# Ingress Patches for Dev
+# ========================================
+
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: openmarket-ingress
+  annotations:
+    alb.ingress.kubernetes.io/load-balancer-name: openmarket-dev-alb
+    alb.ingress.kubernetes.io/tags: Environment=dev,Project=openmarket
+spec:
+  rules:
+    - host: dev.openmarket.example.com
+    - host: api.dev.openmarket.example.com
+    - host: admin.dev.openmarket.example.com
+    - host: seller.dev.openmarket.example.com

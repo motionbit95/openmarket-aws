@@ -1,0 +1,1 @@
+export { PartnerSettlementProductView } from './partner-settlement-product-view';

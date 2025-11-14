@@ -1,0 +1,1 @@
+export { PartnerSettlementDetailView } from './partner-settlement-detail-view';

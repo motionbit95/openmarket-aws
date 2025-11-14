@@ -1,0 +1,34 @@
+# ========================================
+# Frontend Deployment Patches for Production
+# ========================================
+
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: frontend-web
+spec:
+  replicas: 3
+  template:
+    spec:
+      containers:
+        - name: frontend
+          resources:
+            requests:
+              memory: "256Mi"
+              cpu: "200m"
+            limits:
+              memory: "512Mi"
+              cpu: "400m"
+          env:
+            - name: NODE_ENV
+              value: "production"
+            - name: NEXT_PUBLIC_API_URL
+              value: "https://api.openmarket.example.com"
+---
+apiVersion: autoscaling/v2
+kind: HorizontalPodAutoscaler
+metadata:
+  name: frontend-web-hpa
+spec:
+  minReplicas: 3
+  maxReplicas: 20

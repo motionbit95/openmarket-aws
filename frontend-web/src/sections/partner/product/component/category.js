@@ -1,0 +1,237 @@
+export const categories = {
+  카테고리: [
+    {
+      name: "식품",
+      code: "C-FOOD",
+      children: [
+        // { name: "전체", code: "C-FOOD-ALL" },
+        { name: "수산물/건어물", code: "C-FOOD-SEAFOOD-DRIED" },
+        { name: "가루/조미료/오일", code: "C-FOOD-POWDER-SEASONING-OIL" },
+        { name: "축산/계란", code: "C-FOOD-MEAT-EGG" },
+        { name: "면/통조림/가공식품", code: "C-FOOD-NOODLE-CANNED-PROCESSED" },
+        { name: "쌀/잡곡", code: "C-FOOD-RICE-GRAIN" },
+        { name: "커피/원두/차", code: "C-FOOD-COFFEE-TEA" },
+        { name: "과일", code: "C-FOOD-FRUIT" },
+        { name: "유제품/아이스크림", code: "C-FOOD-DAIRY-ICECREAM" },
+        { name: "장/소스/드레싱/식초", code: "C-FOOD-SAUCE-DRESSING-VINEGAR" },
+        { name: "냉장/냉동식품", code: "C-FOOD-REFRIGERATED-FROZEN" },
+        { name: "과자/초콜릿/시리얼", code: "C-FOOD-SNACK-CHOCOLATE-CEREAL" },
+        { name: "생수/음료", code: "C-FOOD-WATER-DRINK" },
+        { name: "채소", code: "C-FOOD-VEGETABLE" },
+        { name: "반찬/간편식", code: "C-FOOD-SIDE-READY" },
+      ],
+    },
+    {
+      name: "유아",
+      code: "C-KIDS",
+      children: [
+        // { name: "전체", code: "C-KIDS-ALL" },
+        { name: "유아동 침구", code: "C-KIDS-BEDDING" },
+        { name: "완구/교구", code: "C-KIDS-TOY-EDU" },
+        { name: "임부/태교용품", code: "C-KIDS-MOM-PRENATAL" },
+      ],
+    },
+    {
+      name: "주방용품",
+      code: "C-KITCHEN",
+      children: [
+        // { name: "전체", code: "C-KITCHEN-ALL" },
+        { name: "주방잡화", code: "C-KITCHEN-GOODS" },
+        { name: "일회용품/종이컵", code: "C-KITCHEN-DISPOSABLE" },
+        { name: "주방가전", code: "C-KITCHEN-APPLIANCE" },
+        { name: "냄비/프라이팬", code: "C-KITCHEN-POT-PAN" },
+        { name: "칼/도마", code: "C-KITCHEN-KNIFE-BOARD" },
+        { name: "주방조리도구", code: "C-KITCHEN-COOKING-TOOLS" },
+        { name: "그릇/홈세트", code: "C-KITCHEN-DISH-SET" },
+        { name: "수저/커트러리", code: "C-KITCHEN-CUTLERY" },
+        { name: "주방수납/정리", code: "C-KITCHEN-STORAGE" },
+        { name: "밀폐저장/도시락", code: "C-KITCHEN-CONTAINER-LUNCHBOX" },
+      ],
+    },
+    {
+      name: "패션/의류/잡화",
+      code: "C-FASHION",
+      children: [
+        // { name: "전체", code: "C-FASHION-ALL" },
+        { name: "바지", code: "C-FASHION-PANTS" },
+        { name: "스커트", code: "C-FASHION-SKIRT" },
+        { name: "원피스", code: "C-FASHION-DRESS" },
+        { name: "상의", code: "C-FASHION-TOP" },
+        { name: "양말/스타킹", code: "C-FASHION-SOCKS-STOCKINGS" },
+        { name: "트레이닝복", code: "C-FASHION-TRAINING" },
+        { name: "세트", code: "C-FASHION-SET" },
+        { name: "언더웨어", code: "C-FASHION-UNDERWEAR" },
+        { name: "구두/신발", code: "C-FASHION-SHOES" },
+        { name: "헤어액세서리", code: "C-FASHION-HAIR-ACCESSORY" },
+        { name: "가방/지갑", code: "C-FASHION-BAG-WALLET" },
+        { name: "패션잡화", code: "C-FASHION-ACCESSORY" },
+        { name: "주얼리/시계", code: "C-FASHION-JEWELRY" },
+        { name: "잡화", code: "C-FASHION-ETC" },
+      ],
+    },
+    {
+      name: "생활",
+      code: "C-LIFE",
+      children: [
+        // { name: "전체", code: "C-LIFE-ALL" },
+        { name: "청소/주방세제", code: "C-LIFE-CLEANING-KITCHEN-DETERGENT" },
+        { name: "탈취/방향", code: "C-LIFE-DEODORANT-FRAGRANCE" },
+        { name: "살충제", code: "C-LIFE-INSECTICIDE" },
+        { name: "세탁/청소용품", code: "C-LIFE-LAUNDRY-CLEANING" },
+        { name: "세탁/세제", code: "C-LIFE-LAUNDRY-DETERGENT" },
+        { name: "구강/면도", code: "C-LIFE-ORAL-SHAVE" },
+        { name: "건강/의료용품", code: "C-LIFE-MEDICAL-DEVICE" },
+        { name: "욕실용품", code: "C-LIFE-BATH" },
+        { name: "화장지/물티슈", code: "C-LIFE-TISSUE-WET" },
+        { name: "생리대/성인기저귀", code: "C-LIFE-SANITARY-ADULT-DIAPER" },
+        { name: "수납/정리", code: "C-LIFE-STORAGE-ORGANIZE" },
+        { name: "생활잡화", code: "C-LIFE-GENERAL-GOODS" },
+      ],
+    },
+    {
+      name: "뷰티",
+      code: "C-BEAUTY",
+      children: [
+        // { name: "전체", code: "C-BEAUTY-ALL" },
+        { name: "메이크업", code: "C-BEAUTY-MAKEUP" },
+        { name: "뷰티소품", code: "C-BEAUTY-TOOLS" },
+        { name: "스킨케어", code: "C-BEAUTY-SKINCARE" },
+        { name: "네일", code: "C-BEAUTY-NAIL" },
+        { name: "클렌징", code: "C-BEAUTY-CLEANSING" },
+        { name: "헤어", code: "C-BEAUTY-HAIR" },
+        { name: "바디", code: "C-BEAUTY-BODY" },
+      ],
+    },
+    {
+      name: "건강",
+      code: "C-HEALTH",
+      children: [
+        // { name: "전체", code: "C-HEALTH-ALL" },
+        { name: "건강기능식품", code: "C-HEALTH-FUNCTIONAL-FOOD" },
+        { name: "다이어트/이너뷰티", code: "C-HEALTH-DIET-INNER-BEAUTY" },
+        { name: "비타민/미네랄", code: "C-HEALTH-VITAMIN-MINERAL" },
+        { name: "영양제", code: "C-HEALTH-SUPPLEMENT" },
+        { name: "홍삼/인삼", code: "C-HEALTH-GINSENG" },
+        { name: "건강즙/음료", code: "C-HEALTH-JUICE-DRINK" },
+        { name: "건강분말/건강환", code: "C-HEALTH-POWDER-PILL" },
+      ],
+    },
+    {
+      name: "반려용품",
+      code: "C-PET",
+      children: [
+        // { name: "전체", code: "C-PET-ALL" },
+        { name: "강아지", code: "C-PET-DOG" },
+        { name: "고양이", code: "C-PET-CAT" },
+        { name: "관상어 용품", code: "C-PET-FISH" },
+      ],
+    },
+    {
+      name: "리빙",
+      code: "C-LIVING",
+      children: [
+        // { name: "전체", code: "C-LIVING-ALL" },
+        { name: "침구/커튼", code: "C-LIVING-BEDDING" },
+        { name: "카페트/쿠션/거실화", code: "C-LIVING-CARPET-CUSHION-SLIPPER" },
+        { name: "가구", code: "C-LIVING-FURNITURE" },
+        { name: "조명/스탠드", code: "C-LIVING-LIGHTING-STAND" },
+        { name: "홈데코", code: "C-LIVING-HOMEDECO" },
+        { name: "셀프인테리어", code: "C-LIVING-SELF-INTERIOR" },
+      ],
+    },
+    {
+      name: "스포츠/레저",
+      code: "C-SPORTS",
+      children: [
+        // { name: "전체", code: "C-SPORTS-ALL" },
+        { name: "캠핑용품", code: "C-SPORTS-CAMPING" },
+        { name: "낚시용품", code: "C-SPORTS-FISHING" },
+        { name: "헬스/요가/댄스", code: "C-SPORTS-HEALTH-YOGA-DANCE" },
+        { name: "라켓스포츠", code: "C-SPORTS-RACKET" },
+        { name: "자전거/킥보드", code: "C-SPORTS-BIKE-KICKBOARD" },
+        { name: "골프", code: "C-SPORTS-GOLF" },
+        { name: "스포츠잡화", code: "C-SPORTS-ETC" },
+        { name: "여성스포츠의류", code: "C-SPORTS-WOMEN-WEAR" },
+        { name: "남성스포츠의류", code: "C-SPORTS-MEN-WEAR" },
+        { name: "유아스포츠의류", code: "C-SPORTS-KIDS-WEAR" },
+      ],
+    },
+    {
+      name: "전자기기",
+      code: "C-ELECTRONICS",
+      children: [
+        // { name: "전체", code: "C-ELECTRONICS-ALL" },
+        { name: "휴대폰/태블릿", code: "C-ELECTRONICS-MOBILE" },
+        { name: "냉장고", code: "C-ELECTRONICS-REFRIGERATOR" },
+        { name: "세탁기", code: "C-ELECTRONICS-WASHER" },
+        { name: "식기세척기", code: "C-ELECTRONICS-DISHWASHER" },
+        { name: "전자레인지", code: "C-ELECTRONICS-MICROWAVE" },
+        { name: "청소기", code: "C-ELECTRONICS-VACUUM" },
+        { name: "TV/영상가전", code: "C-ELECTRONICS-TV-VIDEO" },
+        { name: "계절가전", code: "C-ELECTRONICS-SEASONAL" },
+        { name: "컴퓨터/노트북", code: "C-ELECTRONICS-PC" },
+        { name: "프린터/복합기", code: "C-ELECTRONICS-PRINTER" },
+        { name: "PC주변기기", code: "C-ELECTRONICS-PC-ACCESSORY" },
+        { name: "카메라/캠코더", code: "C-ELECTRONICS-CAMERA" },
+        { name: "소형전자", code: "C-ELECTRONICS-SMALL" },
+        { name: "음향기기", code: "C-ELECTRONICS-AUDIO" },
+        { name: "휴대폰액세서리", code: "C-ELECTRONICS-MOBILE-ACCESSORY" },
+        { name: "네비게이션", code: "C-ELECTRONICS-NAVIGATION" },
+      ],
+    },
+    {
+      name: "자동차용품",
+      code: "C-AUTO",
+      children: [
+        // { name: "전체", code: "C-AUTO-ALL" },
+        { name: "세차/관리용품", code: "C-AUTO-CLEANING-CARE" },
+        { name: "차량내부용품", code: "C-AUTO-INTERIOR" },
+        { name: "차량외부용품", code: "C-AUTO-EXTERIOR" },
+        { name: "차량용전자기기", code: "C-AUTO-ELECTRONICS" },
+        { name: "안전/보호용품", code: "C-AUTO-SAFETY" },
+        { name: "기타 자동차용품", code: "C-AUTO-ETC" },
+      ],
+    },
+    // 악기 카테고리 추가
+    {
+      name: "악기",
+      code: "C-INSTRUMENT",
+      children: [
+        { name: "기타/베이스", code: "C-INSTRUMENT-GUITAR-BASS" },
+        { name: "피아노/키보드", code: "C-INSTRUMENT-PIANO-KEYBOARD" },
+        { name: "드럼/타악기", code: "C-INSTRUMENT-DRUM-PERCUSSION" },
+        { name: "관악기/현악기", code: "C-INSTRUMENT-WIND-STRING" },
+        { name: "음향장비/악세서리", code: "C-INSTRUMENT-AUDIO-ACCESSORY" },
+        { name: "기타 악기", code: "C-INSTRUMENT-ETC" },
+      ],
+    },
+    // 서적 카테고리 추가
+    {
+      name: "서적",
+      code: "C-BOOK",
+      children: [
+        { name: "소설/에세이", code: "C-BOOK-NOVEL-ESSAY" },
+        { name: "아동/청소년", code: "C-BOOK-KIDS-YOUTH" },
+        { name: "경제/경영", code: "C-BOOK-ECONOMY-BUSINESS" },
+        { name: "자기계발", code: "C-BOOK-SELF-IMPROVEMENT" },
+        { name: "인문/사회/역사", code: "C-BOOK-HUMANITIES-SOCIETY-HISTORY" },
+        { name: "과학/IT", code: "C-BOOK-SCIENCE-IT" },
+        { name: "예술/대중문화", code: "C-BOOK-ART-CULTURE" },
+        { name: "기타 서적", code: "C-BOOK-ETC" },
+      ],
+    },
+  ],
+};
+
+export function getCategoryNameByCode(code) {
+  for (const category of categories.카테고리) {
+    if (category.code === code) {
+      return category.name;
+    }
+    const child = category.children.find((c) => c.code === code);
+    if (child) {
+      return child.name;
+    }
+  }
+  return null; // 일치하는 코드가 없을 때
+}

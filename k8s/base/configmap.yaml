@@ -1,0 +1,46 @@
+# ========================================
+# Base ConfigMap
+# ========================================
+# Environment-specific values will override these
+
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: openmarket-config
+data:
+  # Node.js Configuration
+  NODE_ENV: "production"
+
+  # Database Configuration
+  DB_PORT: "3306"
+  DB_NAME: "openmarket"
+
+  # Redis Configuration
+  REDIS_PORT: "6379"
+
+  # Application Configuration
+  API_PORT: "3000"
+  FRONTEND_PORT: "3000"
+
+  # Session Configuration
+  SESSION_NAME: "openmarket.sid"
+
+  # CORS Configuration
+  CORS_ORIGIN: "https://openmarket.example.com"
+
+  # Upload Configuration
+  MAX_FILE_SIZE: "10485760"  # 10MB
+  ALLOWED_FILE_TYPES: "image/jpeg,image/png,image/gif,image/webp"
+
+  # Pagination
+  DEFAULT_PAGE_SIZE: "20"
+  MAX_PAGE_SIZE: "100"
+
+  # Feature Flags
+  ENABLE_EMAIL_VERIFICATION: "true"
+  ENABLE_SELLER_APPROVAL: "true"
+  ENABLE_PRODUCT_REVIEW: "true"
+
+  # Logging
+  LOG_LEVEL: "info"
+  LOG_FORMAT: "json"

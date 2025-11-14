@@ -1,0 +1,26 @@
+# ========================================
+# Backend Deployment Patches for Dev
+# ========================================
+
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: backend-api
+spec:
+  replicas: 2
+  template:
+    spec:
+      containers:
+        - name: backend
+          resources:
+            requests:
+              memory: "256Mi"
+              cpu: "250m"
+            limits:
+              memory: "512Mi"
+              cpu: "500m"
+          env:
+            - name: NODE_ENV
+              value: "development"
+            - name: LOG_LEVEL
+              value: "debug"

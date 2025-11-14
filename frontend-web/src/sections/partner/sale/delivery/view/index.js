@@ -1,0 +1,1 @@
+export { PartnerDeliveryView } from './partner-delivery-view';

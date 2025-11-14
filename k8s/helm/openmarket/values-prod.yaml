@@ -1,0 +1,89 @@
+# ========================================
+# Production Environment Values
+# ========================================
+
+global:
+  environment: prod
+  region: ap-northeast-2
+  clusterName: openmarket-prod-eks
+
+backend:
+  image:
+    tag: v1.0.0  # Use specific versions in production, not latest
+  replicas: 5
+  resources:
+    requests:
+      memory: "512Mi"
+      cpu: "500m"
+    limits:
+      memory: "1Gi"
+      cpu: "1000m"
+  autoscaling:
+    minReplicas: 5
+    maxReplicas: 50
+  env:
+    NODE_ENV: "production"
+    LOG_LEVEL: "warn"
+  serviceAccount:
+    annotations:
+      eks.amazonaws.com/role-arn: "arn:aws:iam::<AWS_ACCOUNT_ID>:role/openmarket-prod-backend-irsa"
+
+frontend:
+  image:
+    tag: v1.0.0
+  replicas: 3
+  resources:
+    requests:
+      memory: "256Mi"
+      cpu: "200m"
+    limits:
+      memory: "512Mi"
+      cpu: "400m"
+  autoscaling:
+    minReplicas: 3
+    maxReplicas: 20
+  env:
+    NODE_ENV: "production"
+    NEXT_PUBLIC_API_URL: "https://api.openmarket.example.com"
+  serviceAccount:
+    annotations:
+      eks.amazonaws.com/role-arn: "arn:aws:iam::<AWS_ACCOUNT_ID>:role/openmarket-prod-frontend-irsa"
+
+ingress:
+  annotations:
+    alb.ingress.kubernetes.io/load-balancer-name: openmarket-prod-alb
+    alb.ingress.kubernetes.io/tags: Environment=prod,Project=openmarket,Critical=true
+    alb.ingress.kubernetes.io/wafv2-acl-arn: arn:aws:wafv2:ap-northeast-2:<AWS_ACCOUNT_ID>:regional/webacl/openmarket-prod-waf/<WAF_ID>
+    alb.ingress.kubernetes.io/shield-advanced-protection: "true"
+  hosts:
+    - host: openmarket.example.com
+      paths:
+        - path: /
+          pathType: Prefix
+          backend: frontend
+    - host: api.openmarket.example.com
+      paths:
+        - path: /
+          pathType: Prefix
+          backend: backend
+    - host: admin.openmarket.example.com
+      paths:
+        - path: /
+          pathType: Prefix
+          backend: frontend
+    - host: seller.openmarket.example.com
+      paths:
+        - path: /
+          pathType: Prefix
+          backend: frontend
+
+configMap:
+  data:
+    NODE_ENV: "production"
+    LOG_LEVEL: "warn"
+
+podDisruptionBudget:
+  backend:
+    minAvailable: 3
+  frontend:
+    minAvailable: 2

@@ -1,0 +1,127 @@
+# ========================================
+# Network Policies for Security
+# ========================================
+
+# Backend API Network Policy
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: backend-api-netpol
+spec:
+  podSelector:
+    matchLabels:
+      app: backend-api
+  policyTypes:
+    - Ingress
+    - Egress
+
+  ingress:
+    # Allow traffic from frontend
+    - from:
+        - podSelector:
+            matchLabels:
+              app: frontend-web
+      ports:
+        - protocol: TCP
+          port: 3000
+
+    # Allow traffic from ingress controller
+    - from:
+        - namespaceSelector:
+            matchLabels:
+              name: kube-system
+        - podSelector:
+            matchLabels:
+              app.kubernetes.io/name: aws-load-balancer-controller
+      ports:
+        - protocol: TCP
+          port: 3000
+
+  egress:
+    # Allow DNS resolution
+    - to:
+        - namespaceSelector:
+            matchLabels:
+              name: kube-system
+        - podSelector:
+            matchLabels:
+              k8s-app: kube-dns
+      ports:
+        - protocol: UDP
+          port: 53
+
+    # Allow access to RDS (database)
+    - to:
+        - namespaceSelector: {}
+      ports:
+        - protocol: TCP
+          port: 3306
+
+    # Allow access to ElastiCache (Redis)
+    - to:
+        - namespaceSelector: {}
+      ports:
+        - protocol: TCP
+          port: 6379
+
+    # Allow HTTPS for external API calls (S3, etc.)
+    - to:
+        - namespaceSelector: {}
+      ports:
+        - protocol: TCP
+          port: 443
+---
+# Frontend Web Network Policy
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: frontend-web-netpol
+spec:
+  podSelector:
+    matchLabels:
+      app: frontend-web
+  policyTypes:
+    - Ingress
+    - Egress
+
+  ingress:
+    # Allow traffic from ingress controller
+    - from:
+        - namespaceSelector:
+            matchLabels:
+              name: kube-system
+        - podSelector:
+            matchLabels:
+              app.kubernetes.io/name: aws-load-balancer-controller
+      ports:
+        - protocol: TCP
+          port: 3000
+
+  egress:
+    # Allow DNS resolution
+    - to:
+        - namespaceSelector:
+            matchLabels:
+              name: kube-system
+        - podSelector:
+            matchLabels:
+              k8s-app: kube-dns
+      ports:
+        - protocol: UDP
+          port: 53
+
+    # Allow access to backend API
+    - to:
+        - podSelector:
+            matchLabels:
+              app: backend-api
+      ports:
+        - protocol: TCP
+          port: 3000
+
+    # Allow HTTPS for external resources (CloudFront, etc.)
+    - to:
+        - namespaceSelector: {}
+      ports:
+        - protocol: TCP
+          port: 443
