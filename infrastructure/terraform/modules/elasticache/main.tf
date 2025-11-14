@@ -11,7 +11,7 @@ resource "aws_elasticache_subnet_group" "main" {
 
 resource "aws_elasticache_replication_group" "main" {
   replication_group_id       = "${var.name_prefix}-redis"
-  replication_group_description = "Redis cluster for ${var.name_prefix}"
+  description                = "Redis cluster for ${var.name_prefix}"
   engine                     = "redis"
   engine_version             = var.engine_version
   node_type                  = var.node_type
@@ -24,7 +24,6 @@ resource "aws_elasticache_replication_group" "main" {
   multi_az_enabled           = var.num_cache_nodes > 1 ? true : false
   at_rest_encryption_enabled = true
   transit_encryption_enabled = true
-  auth_token_enabled         = true
   auth_token                 = random_password.redis_auth.result
   snapshot_retention_limit   = var.snapshot_retention_limit
   snapshot_window            = "03:00-05:00"

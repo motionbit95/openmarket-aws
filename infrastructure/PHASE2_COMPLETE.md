@@ -53,6 +53,7 @@ infrastructure/terraform/
 ### 1. VPC 모듈 (네트워킹)
 
 **생성 리소스:**
+
 - ✅ VPC (10.0.0.0/16)
 - ✅ Internet Gateway
 - ✅ NAT Gateway × 1 (개발 환경)
@@ -62,6 +63,7 @@ infrastructure/terraform/
 - ✅ Route Tables 및 연결
 
 **주요 기능:**
+
 ```hcl
 # Public Subnet (10.0.1.0/24, 10.0.2.0/24, 10.0.3.0/24)
 - Internet Gateway를 통한 인터넷 접근
@@ -79,6 +81,7 @@ infrastructure/terraform/
 ### 2. Security Groups 모듈
 
 **생성 리소스:**
+
 - ✅ EKS Cluster Security Group
 - ✅ EKS Nodes Security Group
 - ✅ RDS Security Group (Port 3306)
@@ -86,6 +89,7 @@ infrastructure/terraform/
 - ✅ ALB Security Group (Port 80, 443)
 
 **보안 규칙:**
+
 ```
 EKS Nodes → RDS (3306)           ✓ 허용
 EKS Nodes → ElastiCache (6379)   ✓ 허용
@@ -96,6 +100,7 @@ ALB → EKS Nodes                  ✓ 허용
 ### 3. EKS 모듈 (Kubernetes)
 
 **생성 리소스:**
+
 - ✅ EKS Cluster (v1.28)
 - ✅ EKS Node Group (t3.medium × 2~4)
 - ✅ IAM Roles & Policies
@@ -103,6 +108,7 @@ ALB → EKS Nodes                  ✓ 허용
 - ✅ CloudWatch Log Groups
 
 **설정:**
+
 ```yaml
 Cluster Version: 1.28
 Node Type: t3.medium
@@ -111,16 +117,17 @@ Max Nodes: 4
 Desired Nodes: 2
 
 Features:
-- Auto Scaling ✓
-- IRSA (IAM Roles for Service Accounts) ✓
-- Cluster Logging ✓
-- Private API Endpoint ✓
-- Public API Endpoint ✓
+  - Auto Scaling ✓
+  - IRSA (IAM Roles for Service Accounts) ✓
+  - Cluster Logging ✓
+  - Private API Endpoint ✓
+  - Public API Endpoint ✓
 ```
 
 ### 4. RDS 모듈 (데이터베이스)
 
 **생성 리소스:**
+
 - ✅ Aurora MySQL Cluster (v8.0)
 - ✅ Writer Instance × 1
 - ✅ Reader Instance × 1
@@ -129,6 +136,7 @@ Features:
 - ✅ CloudWatch Monitoring
 
 **설정:**
+
 ```yaml
 Engine: Aurora MySQL 8.0
 Instance Class: db.t3.medium
@@ -138,13 +146,14 @@ Encryption: ✓
 Enhanced Monitoring: ✓
 
 Endpoints:
-- Writer: openmarket-dev-aurora-cluster.cluster-xxx.ap-northeast-2.rds.amazonaws.com
-- Reader: openmarket-dev-aurora-cluster.cluster-ro-xxx.ap-northeast-2.rds.amazonaws.com
+  - Writer: openmarket-dev-aurora-cluster.cluster-xxx.ap-northeast-2.rds.amazonaws.com
+  - Reader: openmarket-dev-aurora-cluster.cluster-ro-xxx.ap-northeast-2.rds.amazonaws.com
 ```
 
 ### 5. ElastiCache 모듈 (Redis)
 
 **생성 리소스:**
+
 - ✅ Redis Replication Group
 - ✅ Redis Subnet Group
 - ✅ Parameter Group
@@ -152,6 +161,7 @@ Endpoints:
 - ✅ Automatic Failover (Multi-AZ)
 
 **설정:**
+
 ```yaml
 Engine: Redis 7.0
 Node Type: cache.t3.micro
@@ -162,13 +172,14 @@ Encryption:
   - Auth Token: ✓
 
 Features:
-- Automatic Failover: ✗ (단일 노드)
-- Backup: ✓
+  - Automatic Failover: ✗ (단일 노드)
+  - Backup: ✓
 ```
 
 ### 6. S3 & CloudFront 모듈
 
 **생성 리소스:**
+
 - ✅ S3 Bucket (static-assets)
 - ✅ S3 Bucket (user-uploads)
 - ✅ S3 Bucket (backups)
@@ -176,27 +187,28 @@ Features:
 - ✅ Origin Access Identity
 
 **설정:**
+
 ```yaml
 S3 Buckets:
 1. static-assets:
-   - Versioning: ✓
-   - Encryption: AES256
-   - Public Access: ✗ (CloudFront만 접근)
+  - Versioning: ✓
+  - Encryption: AES256
+  - Public Access: ✗ (CloudFront만 접근)
 
 2. user-uploads:
-   - Versioning: ✓
-   - Encryption: AES256
-   - CORS: ✓
-   - Public Access: ✗
+  - Versioning: ✓
+  - Encryption: AES256
+  - CORS: ✓
+  - Public Access: ✗
 
 3. backups:
-   - Lifecycle: 90일 후 삭제
-   - Versioning: ✓
+  - Lifecycle: 90일 후 삭제
+  - Versioning: ✓
 
 CloudFront:
-- SSL: CloudFront 기본 인증서
-- Caching: ✓
-- Compression: ✓
+  - SSL: CloudFront 기본 인증서
+  - Caching: ✓
+  - Compression: ✓
 ```
 
 ## 💰 예상 비용 (개발 환경 - 월간)
@@ -221,6 +233,7 @@ Data Transfer           100GB    $0.09/GB           $9
 ### 환경별 차이점
 
 #### Development (개발)
+
 ```hcl
 vpc_cidr           = "10.0.0.0/16"
 single_nat_gateway = true              # 비용 절감
@@ -241,6 +254,7 @@ enable_monitoring           = false
 ```
 
 #### Production (프로덕션 - 참고용)
+
 ```hcl
 vpc_cidr           = "10.0.0.0/16"
 single_nat_gateway = false            # 고가용성
@@ -265,6 +279,7 @@ enable_monitoring           = true
 ### 사전 준비
 
 **1. AWS 계정 설정**
+
 ```bash
 # IAM 사용자 생성
 # Access Key 발급
@@ -276,15 +291,16 @@ aws_secret_access_key = YOUR_SECRET_KEY
 ```
 
 **2. S3 Backend 생성**
+
 ```bash
 # S3 버킷 생성
-aws s3 mb s3://openmarket-terraform-state \
+aws s3 mb s3://openmarket-terraform-state-251114 \
   --region ap-northeast-2 \
   --profile openmarket
 
 # 버저닝 활성화
 aws s3api put-bucket-versioning \
-  --bucket openmarket-terraform-state \
+  --bucket openmarket-terraform-state-251114 \
   --versioning-configuration Status=Enabled \
   --profile openmarket
 
@@ -301,6 +317,7 @@ aws dynamodb create-table \
 ### Terraform 실행
 
 **1. 초기화**
+
 ```bash
 cd infrastructure/terraform/environments/dev
 
@@ -308,6 +325,7 @@ terraform init
 ```
 
 **2. 계획 확인**
+
 ```bash
 terraform plan
 
@@ -316,6 +334,7 @@ Plan: 50+ to add, 0 to change, 0 to destroy
 ```
 
 **3. 배포 실행**
+
 ```bash
 terraform apply
 
@@ -324,6 +343,7 @@ terraform apply
 ```
 
 **4. 출력 확인**
+
 ```bash
 terraform output
 
@@ -353,6 +373,7 @@ kubectl get nodes
 배포 후 다음 정보를 확인하세요:
 
 ### 1. 데이터베이스 접속 정보
+
 ```bash
 # RDS 엔드포인트
 terraform output rds_cluster_endpoint
@@ -366,6 +387,7 @@ aws secretsmanager get-secret-value \
 ```
 
 ### 2. Redis 접속 정보
+
 ```bash
 # Redis 엔드포인트
 terraform output redis_endpoint
@@ -379,12 +401,14 @@ aws secretsmanager get-secret-value \
 ```
 
 ### 3. S3 버킷
+
 ```bash
 terraform output static_assets_bucket
 terraform output user_uploads_bucket
 ```
 
 ### 4. CloudFront URL
+
 ```bash
 terraform output cloudfront_domain_name
 ```
@@ -392,6 +416,7 @@ terraform output cloudfront_domain_name
 ## 🔒 보안 Best Practices
 
 ### 1. Secrets 관리
+
 ```
 ✓ RDS 비밀번호: Secrets Manager
 ✓ Redis Auth Token: Secrets Manager
@@ -399,6 +424,7 @@ terraform output cloudfront_domain_name
 ```
 
 ### 2. 네트워크 격리
+
 ```
 ✓ Private Subnets: EKS Nodes
 ✓ Database Subnets: RDS, Redis (격리)
@@ -406,6 +432,7 @@ terraform output cloudfront_domain_name
 ```
 
 ### 3. 암호화
+
 ```
 ✓ RDS: At-rest encryption
 ✓ ElastiCache: At-rest + In-transit
@@ -433,49 +460,61 @@ terraform destroy
 ## 📚 모듈 설명
 
 ### VPC 모듈
+
 **목적**: 네트워크 기반 구조 생성
 **주요 리소스**: VPC, Subnets, NAT Gateway, Route Tables
 **특징**:
+
 - 3 AZ에 걸친 고가용성
 - Public/Private/Database Subnet 분리
 - EKS와 통합된 태깅
 
 ### Security Groups 모듈
+
 **목적**: 네트워크 보안 규칙 정의
 **주요 리소스**: Security Groups
 **특징**:
+
 - 최소 권한 원칙
 - 명시적 허용 규칙만
 - EKS, RDS, Redis 간 통신 허용
 
 ### EKS 모듈
+
 **목적**: Kubernetes 클러스터 생성
 **주요 리소스**: EKS Cluster, Node Groups, IAM Roles
 **특징**:
+
 - IRSA 지원
 - Auto Scaling
 - CloudWatch 로깅
 
 ### RDS 모듈
+
 **목적**: 관리형 MySQL 데이터베이스
 **주요 리소스**: Aurora Cluster, Instances, Secrets
 **특징**:
+
 - Multi-AZ 고가용성
 - 자동 백업
 - Secrets Manager 통합
 
 ### ElastiCache 모듈
+
 **목적**: 관리형 Redis 캐시
 **주요 리소스**: Redis Replication Group, Secrets
 **특징**:
+
 - 암호화 (at-rest, in-transit)
 - Auth Token
 - 자동 스냅샷
 
 ### S3 모듈
+
 **목적**: 객체 스토리지 및 CDN
 **주요 리소스**: S3 Buckets, CloudFront
 **특징**:
+
 - 버저닝
 - 암호화
 - CloudFront CDN
@@ -483,14 +522,17 @@ terraform destroy
 ## ⚠️ 알려진 이슈
 
 ### 1. Aurora Serverless v2 미사용
+
 **이유**: 비용 최적화
 **해결**: 필요시 모듈 수정
 
 ### 2. 단일 NAT Gateway (개발)
+
 **영향**: 고가용성 제한
 **해결**: 프로덕션에서는 multi-nat 사용
 
 ### 3. CloudFront SSL
+
 **현재**: CloudFront 기본 인증서
 **개선**: ACM 인증서 + 사용자 도메인
 
@@ -499,12 +541,15 @@ terraform destroy
 ### Phase 3: Kubernetes 배포 (예상 2주)
 
 #### 준비 사항
+
 - [ ] Phase 2 리소스 배포 완료
 - [ ] kubectl 설치 및 설정
 - [ ] Helm 설치
 
 #### 주요 작업
+
 1. **Kubernetes Manifests**
+
    - Deployment (API 서비스)
    - Service (ClusterIP, LoadBalancer)
    - ConfigMap (환경 설정)
@@ -513,6 +558,7 @@ terraform destroy
    - Ingress (라우팅)
 
 2. **Helm Charts**
+
    - Backend API Chart
    - 환경별 Values 파일
 
@@ -537,6 +583,7 @@ terraform destroy
 ## 💡 유용한 명령어
 
 ### Terraform
+
 ```bash
 # 포맷 정리
 terraform fmt -recursive
@@ -558,6 +605,7 @@ terraform apply -target=module.vpc
 ```
 
 ### AWS CLI
+
 ```bash
 # EKS 클러스터 확인
 aws eks list-clusters --region ap-northeast-2 --profile openmarket
@@ -574,16 +622,19 @@ aws s3 ls --profile openmarket
 ## 🎓 학습 포인트
 
 ### Terraform Modules
+
 - 재사용 가능한 코드 구조
 - 입력 변수와 출력값
 - 모듈 간 의존성 관리
 
 ### AWS 네트워킹
+
 - VPC, Subnet, Route Table 관계
 - NAT Gateway vs Internet Gateway
 - Security Groups vs NACLs
 
 ### IaC Best Practices
+
 - Remote State 관리 (S3 + DynamoDB)
 - 환경별 분리 (dev, staging, prod)
 - Secrets 관리 (Secrets Manager)
@@ -591,6 +642,7 @@ aws s3 ls --profile openmarket
 ## 📞 지원
 
 문제 발생 시:
+
 1. Terraform 에러 메시지 확인
 2. AWS CloudWatch 로그 확인
 3. `terraform plan` 재실행

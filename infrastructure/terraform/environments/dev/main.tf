@@ -4,10 +4,11 @@
 
 terraform {
   backend "s3" {
-    bucket         = "openmarket-terraform-state"
+    bucket         = "openmarket-terraform-state-251114"
     key            = "dev/terraform.tfstate"
     region         = "ap-northeast-2"
     dynamodb_table = "openmarket-terraform-locks"
+    profile        = "openmarket"
     encrypt        = true
   }
 }
@@ -147,7 +148,7 @@ module "iam" {
   name_prefix            = local.name_prefix
   cluster_name           = module.eks.cluster_id
   oidc_provider_arn      = module.eks.oidc_provider_arn
-  oidc_provider_url      = module.eks.oidc_provider_url
+  oidc_provider_url      = module.eks.cluster_oidc_issuer_url
   user_uploads_bucket_arn = module.s3.user_uploads_bucket_arn
   static_assets_bucket_arn = module.s3.static_assets_bucket_arn
   rds_secret_arn         = module.rds.secret_arn
