@@ -1,0 +1,366 @@
+name: Lambda Functions CI/CD
+
+on:
+  push:
+    branches:
+      - main
+      - develop
+    paths:
+      - 'lambda/**'
+      - 'infrastructure/terraform/modules/lambda/**'
+      - '.github/workflows/lambda-ci-cd.yml'
+  pull_request:
+    branches:
+      - main
+      - develop
+    paths:
+      - 'lambda/**'
+
+env:
+  AWS_REGION: ap-northeast-2
+  NODE_VERSION: '20'
+
+jobs:
+  # Job 1: 변경된 Lambda 감지
+  detect-changes:
+    name: Detect Changed Lambdas
+    runs-on: ubuntu-latest
+
+    outputs:
+      image-processor: ${{ steps.changes.outputs.image-processor }}
+      email-sender: ${{ steps.changes.outputs.email-sender }}
+      settlement-report: ${{ steps.changes.outputs.settlement-report }}
+      webhook-handler: ${{ steps.changes.outputs.webhook-handler }}
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Detect changes
+        uses: dorny/paths-filter@v2
+        id: changes
+        with:
+          filters: |
+            image-processor:
+              - 'lambda/image-processor/**'
+            email-sender:
+              - 'lambda/email-sender/**'
+            settlement-report:
+              - 'lambda/settlement-report/**'
+            webhook-handler:
+              - 'lambda/webhook-handler/**'
+
+  # Job 2: Image Processor 빌드 및 배포
+  deploy-image-processor:
+    name: Deploy Image Processor
+    runs-on: ubuntu-latest
+    needs: detect-changes
+    if: needs.detect-changes.outputs.image-processor == 'true' && github.event_name == 'push'
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+
+      - name: Set environment
+        id: env
+        run: |
+          if [ "${{ github.ref }}" == "refs/heads/main" ]; then
+            echo "environment=prod" >> $GITHUB_OUTPUT
+          else
+            echo "environment=dev" >> $GITHUB_OUTPUT
+          fi
+
+      - name: Install dependencies
+        working-directory: lambda/image-processor
+        run: npm ci --production
+
+      - name: Create deployment package
+        working-directory: lambda/image-processor
+        run: |
+          zip -r function.zip index.js node_modules/ package.json
+          ls -lh function.zip
+
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-region: ${{ env.AWS_REGION }}
+
+      - name: Update Lambda function
+        run: |
+          aws lambda update-function-code \
+            --function-name openmarket-${{ steps.env.outputs.environment }}-image-processor \
+            --zip-file fileb://lambda/image-processor/function.zip
+
+      - name: Wait for update
+        run: |
+          aws lambda wait function-updated \
+            --function-name openmarket-${{ steps.env.outputs.environment }}-image-processor
+
+      - name: Publish new version
+        id: publish
+        run: |
+          VERSION=$(aws lambda publish-version \
+            --function-name openmarket-${{ steps.env.outputs.environment }}-image-processor \
+            --description "Deployed from commit ${{ github.sha }}" \
+            --query 'Version' \
+            --output text)
+          echo "version=$VERSION" >> $GITHUB_OUTPUT
+
+      - name: Update alias (Production only)
+        if: steps.env.outputs.environment == 'prod'
+        run: |
+          aws lambda update-alias \
+            --function-name openmarket-${{ steps.env.outputs.environment }}-image-processor \
+            --name live \
+            --function-version ${{ steps.publish.outputs.version }}
+
+  # Job 3: Email Sender 빌드 및 배포
+  deploy-email-sender:
+    name: Deploy Email Sender
+    runs-on: ubuntu-latest
+    needs: detect-changes
+    if: needs.detect-changes.outputs.email-sender == 'true' && github.event_name == 'push'
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+
+      - name: Set environment
+        id: env
+        run: |
+          if [ "${{ github.ref }}" == "refs/heads/main" ]; then
+            echo "environment=prod" >> $GITHUB_OUTPUT
+          else
+            echo "environment=dev" >> $GITHUB_OUTPUT
+          fi
+
+      - name: Install dependencies
+        working-directory: lambda/email-sender
+        run: npm ci --production
+
+      - name: Create deployment package
+        working-directory: lambda/email-sender
+        run: |
+          zip -r function.zip index.js node_modules/ package.json
+          ls -lh function.zip
+
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-region: ${{ env.AWS_REGION }}
+
+      - name: Update Lambda function
+        run: |
+          aws lambda update-function-code \
+            --function-name openmarket-${{ steps.env.outputs.environment }}-email-sender \
+            --zip-file fileb://lambda/email-sender/function.zip
+
+      - name: Wait for update
+        run: |
+          aws lambda wait function-updated \
+            --function-name openmarket-${{ steps.env.outputs.environment }}-email-sender
+
+      - name: Publish new version
+        run: |
+          aws lambda publish-version \
+            --function-name openmarket-${{ steps.env.outputs.environment }}-email-sender \
+            --description "Deployed from commit ${{ github.sha }}"
+
+  # Job 4: Settlement Report 빌드 및 배포
+  deploy-settlement-report:
+    name: Deploy Settlement Report
+    runs-on: ubuntu-latest
+    needs: detect-changes
+    if: needs.detect-changes.outputs.settlement-report == 'true' && github.event_name == 'push'
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+
+      - name: Set environment
+        id: env
+        run: |
+          if [ "${{ github.ref }}" == "refs/heads/main" ]; then
+            echo "environment=prod" >> $GITHUB_OUTPUT
+          else
+            echo "environment=dev" >> $GITHUB_OUTPUT
+          fi
+
+      - name: Install dependencies
+        working-directory: lambda/settlement-report
+        run: npm ci --production
+
+      - name: Create deployment package
+        working-directory: lambda/settlement-report
+        run: |
+          zip -r function.zip index.js node_modules/ package.json
+          ls -lh function.zip
+
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-region: ${{ env.AWS_REGION }}
+
+      - name: Update Lambda function
+        run: |
+          aws lambda update-function-code \
+            --function-name openmarket-${{ steps.env.outputs.environment }}-settlement-report \
+            --zip-file fileb://lambda/settlement-report/function.zip
+
+      - name: Wait for update
+        run: |
+          aws lambda wait function-updated \
+            --function-name openmarket-${{ steps.env.outputs.environment }}-settlement-report
+
+      - name: Publish new version
+        run: |
+          aws lambda publish-version \
+            --function-name openmarket-${{ steps.env.outputs.environment }}-settlement-report \
+            --description "Deployed from commit ${{ github.sha }}"
+
+  # Job 5: Webhook Handler 빌드 및 배포
+  deploy-webhook-handler:
+    name: Deploy Webhook Handler
+    runs-on: ubuntu-latest
+    needs: detect-changes
+    if: needs.detect-changes.outputs.webhook-handler == 'true' && github.event_name == 'push'
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+
+      - name: Set environment
+        id: env
+        run: |
+          if [ "${{ github.ref }}" == "refs/heads/main" ]; then
+            echo "environment=prod" >> $GITHUB_OUTPUT
+          else
+            echo "environment=dev" >> $GITHUB_OUTPUT
+          fi
+
+      - name: Install dependencies
+        working-directory: lambda/webhook-handler
+        run: npm ci --production
+
+      - name: Create deployment package
+        working-directory: lambda/webhook-handler
+        run: |
+          zip -r function.zip index.js node_modules/ package.json
+          ls -lh function.zip
+
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-region: ${{ env.AWS_REGION }}
+
+      - name: Update Lambda function
+        run: |
+          aws lambda update-function-code \
+            --function-name openmarket-${{ steps.env.outputs.environment }}-webhook-handler \
+            --zip-file fileb://lambda/webhook-handler/function.zip
+
+      - name: Wait for update
+        run: |
+          aws lambda wait function-updated \
+            --function-name openmarket-${{ steps.env.outputs.environment }}-webhook-handler
+
+      - name: Publish new version
+        run: |
+          aws lambda publish-version \
+            --function-name openmarket-${{ steps.env.outputs.environment }}-webhook-handler \
+            --description "Deployed from commit ${{ github.sha }}"
+
+  # Job 6: 통합 테스트
+  integration-test:
+    name: Integration Tests
+    runs-on: ubuntu-latest
+    needs: [deploy-image-processor, deploy-email-sender, deploy-settlement-report, deploy-webhook-handler]
+    if: |
+      always() &&
+      (needs.deploy-image-processor.result == 'success' ||
+       needs.deploy-email-sender.result == 'success' ||
+       needs.deploy-settlement-report.result == 'success' ||
+       needs.deploy-webhook-handler.result == 'success')
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-region: ${{ env.AWS_REGION }}
+
+      - name: Test Image Processor (if deployed)
+        if: needs.deploy-image-processor.result == 'success'
+        run: |
+          echo "Testing Image Processor Lambda..."
+          # S3에 테스트 이미지 업로드 (자동 트리거)
+          echo "Upload test image to trigger Lambda"
+
+      - name: Test Email Sender (if deployed)
+        if: needs.deploy-email-sender.result == 'success'
+        run: |
+          echo "Testing Email Sender Lambda..."
+          # SQS에 테스트 메시지 전송
+          echo "Send test SQS message"
+
+      - name: Test Webhook Handler (if deployed)
+        if: needs.deploy-webhook-handler.result == 'success'
+        run: |
+          echo "Testing Webhook Handler Lambda..."
+          # Function URL로 테스트 요청
+          echo "Send test webhook request"
+
+  # Job 7: Slack 알림
+  notify:
+    name: Notify
+    runs-on: ubuntu-latest
+    needs: [deploy-image-processor, deploy-email-sender, deploy-settlement-report, deploy-webhook-handler]
+    if: always()
+
+    steps:
+      - name: Send Slack notification
+        if: env.SLACK_WEBHOOK_URL != ''
+        uses: 8398a7/action-slack@v3
+        with:
+          status: ${{ job.status }}
+          text: |
+            Lambda deployment completed
+            Image Processor: ${{ needs.deploy-image-processor.result }}
+            Email Sender: ${{ needs.deploy-email-sender.result }}
+            Settlement Report: ${{ needs.deploy-settlement-report.result }}
+            Webhook Handler: ${{ needs.deploy-webhook-handler.result }}
+          webhook_url: ${{ secrets.SLACK_WEBHOOK_URL }}
+        env:
+          SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK_URL }}

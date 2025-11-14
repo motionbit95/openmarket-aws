@@ -1,0 +1,23 @@
+{
+  "name": "openmarket-settlement-report",
+  "version": "1.0.0",
+  "description": "Lambda function for generating seller settlement reports on schedule",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "keywords": [
+    "lambda",
+    "settlement",
+    "report",
+    "scheduler",
+    "eventbridge"
+  ],
+  "author": "OpenMarket",
+  "license": "MIT",
+  "dependencies": {
+    "aws-sdk": "^2.1691.0",
+    "mysql2": "^3.6.5"
+  },
+  "devDependencies": {}
+}

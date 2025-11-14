@@ -1,0 +1,108 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: alertmanager-config
+  namespace: monitoring
+data:
+  alertmanager.yml: |
+    global:
+      resolve_timeout: 5m
+      # Slack webhook URL (환경 변수로 설정)
+      slack_api_url: '${SLACK_WEBHOOK_URL}'
+
+    # 알림 라우팅
+    route:
+      group_by: ['alertname', 'cluster', 'severity']
+      group_wait: 10s
+      group_interval: 10s
+      repeat_interval: 12h
+      receiver: 'default'
+      routes:
+        # Critical alerts
+        - match:
+            severity: critical
+          receiver: 'slack-critical'
+          continue: true
+
+        # Warning alerts
+        - match:
+            severity: warning
+          receiver: 'slack-warnings'
+
+        # Infrastructure alerts
+        - match:
+            component: infrastructure
+          receiver: 'slack-infrastructure'
+
+        # Application alerts
+        - match:
+            component: application
+          receiver: 'slack-application'
+
+    # Receivers 설정
+    receivers:
+      - name: 'default'
+        slack_configs:
+          - channel: '#openmarket-alerts'
+            title: '[{{ .Status | toUpper }}] {{ .CommonLabels.alertname }}'
+            text: |
+              *Summary:* {{ .CommonAnnotations.summary }}
+              *Description:* {{ .CommonAnnotations.description }}
+              *Severity:* {{ .CommonLabels.severity }}
+              *Environment:* {{ .CommonLabels.environment }}
+            send_resolved: true
+
+      - name: 'slack-critical'
+        slack_configs:
+          - channel: '#openmarket-critical'
+            title: ':fire: [CRITICAL] {{ .CommonLabels.alertname }}'
+            text: |
+              *Summary:* {{ .CommonAnnotations.summary }}
+              *Description:* {{ .CommonAnnotations.description }}
+              *Environment:* {{ .CommonLabels.environment }}
+              *Time:* {{ .StartsAt.Format "2006-01-02 15:04:05 KST" }}
+            color: 'danger'
+            send_resolved: true
+
+      - name: 'slack-warnings'
+        slack_configs:
+          - channel: '#openmarket-warnings'
+            title: ':warning: [WARNING] {{ .CommonLabels.alertname }}'
+            text: |
+              *Summary:* {{ .CommonAnnotations.summary }}
+              *Description:* {{ .CommonAnnotations.description }}
+              *Environment:* {{ .CommonLabels.environment }}
+            color: 'warning'
+            send_resolved: true
+
+      - name: 'slack-infrastructure'
+        slack_configs:
+          - channel: '#openmarket-infra'
+            title: '[Infrastructure] {{ .CommonLabels.alertname }}'
+            text: |
+              *Summary:* {{ .CommonAnnotations.summary }}
+              *Description:* {{ .CommonAnnotations.description }}
+            send_resolved: true
+
+      - name: 'slack-application'
+        slack_configs:
+          - channel: '#openmarket-app'
+            title: '[Application] {{ .CommonLabels.alertname }}'
+            text: |
+              *Summary:* {{ .CommonAnnotations.summary }}
+              *Description:* {{ .CommonAnnotations.description }}
+            send_resolved: true
+
+    # Inhibit rules (중복 알림 방지)
+    inhibit_rules:
+      - source_match:
+          severity: 'critical'
+        target_match:
+          severity: 'warning'
+        equal: ['alertname', 'cluster', 'service']
+
+      - source_match:
+          alertname: 'PodNotReady'
+        target_match:
+          alertname: 'DeploymentReplicaMismatch'
+        equal: ['namespace', 'deployment']

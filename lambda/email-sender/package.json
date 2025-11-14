@@ -1,0 +1,22 @@
+{
+  "name": "openmarket-email-sender",
+  "version": "1.0.0",
+  "description": "Lambda function for sending transactional and promotional emails via SES",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "keywords": [
+    "lambda",
+    "email",
+    "ses",
+    "sqs",
+    "notification"
+  ],
+  "author": "OpenMarket",
+  "license": "MIT",
+  "dependencies": {
+    "aws-sdk": "^2.1691.0"
+  },
+  "devDependencies": {}
+}

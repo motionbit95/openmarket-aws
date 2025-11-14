@@ -1,0 +1,261 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: grafana-dashboards
+  namespace: monitoring
+data:
+  # Kubernetes Cluster Overview Dashboard
+  kubernetes-cluster.json: |
+    {
+      "dashboard": {
+        "title": "Kubernetes Cluster Overview",
+        "tags": ["kubernetes", "cluster"],
+        "timezone": "Asia/Seoul",
+        "panels": [
+          {
+            "id": 1,
+            "title": "Cluster CPU Usage",
+            "type": "graph",
+            "targets": [
+              {
+                "expr": "sum(rate(container_cpu_usage_seconds_total[5m])) by (node)"
+              }
+            ]
+          },
+          {
+            "id": 2,
+            "title": "Cluster Memory Usage",
+            "type": "graph",
+            "targets": [
+              {
+                "expr": "sum(container_memory_usage_bytes) by (node)"
+              }
+            ]
+          },
+          {
+            "id": 3,
+            "title": "Pod Status",
+            "type": "stat",
+            "targets": [
+              {
+                "expr": "count(kube_pod_status_phase{phase='Running'})"
+              }
+            ]
+          }
+        ]
+      }
+    }
+
+  # OpenMarket Application Dashboard
+  openmarket-app.json: |
+    {
+      "dashboard": {
+        "title": "OpenMarket Application",
+        "tags": ["openmarket", "application"],
+        "timezone": "Asia/Seoul",
+        "rows": [
+          {
+            "title": "Backend API Metrics",
+            "panels": [
+              {
+                "id": 1,
+                "title": "Backend Request Rate",
+                "type": "graph",
+                "targets": [
+                  {
+                    "expr": "sum(rate(http_requests_total{app='backend'}[5m])) by (method, status)"
+                  }
+                ],
+                "yaxes": [
+                  {
+                    "label": "Requests/sec",
+                    "format": "short"
+                  }
+                ]
+              },
+              {
+                "id": 2,
+                "title": "Backend Error Rate",
+                "type": "graph",
+                "targets": [
+                  {
+                    "expr": "sum(rate(http_requests_total{app='backend',status=~'5..'}[5m])) / sum(rate(http_requests_total{app='backend'}[5m])) * 100"
+                  }
+                ],
+                "thresholds": [
+                  {
+                    "value": 1,
+                    "colorMode": "critical"
+                  }
+                ]
+              },
+              {
+                "id": 3,
+                "title": "Backend Response Time (P95)",
+                "type": "graph",
+                "targets": [
+                  {
+                    "expr": "histogram_quantile(0.95, sum(rate(http_request_duration_seconds_bucket{app='backend'}[5m])) by (le, endpoint))"
+                  }
+                ],
+                "yaxes": [
+                  {
+                    "label": "Seconds",
+                    "format": "s"
+                  }
+                ]
+              },
+              {
+                "id": 4,
+                "title": "Backend Pod Count",
+                "type": "stat",
+                "targets": [
+                  {
+                    "expr": "count(kube_pod_info{pod=~'backend.*',namespace=~'openmarket-.*'})"
+                  }
+                ]
+              }
+            ]
+          },
+          {
+            "title": "Frontend Metrics",
+            "panels": [
+              {
+                "id": 5,
+                "title": "Frontend Request Rate",
+                "type": "graph",
+                "targets": [
+                  {
+                    "expr": "sum(rate(http_requests_total{app='frontend-web'}[5m])) by (page)"
+                  }
+                ]
+              },
+              {
+                "id": 6,
+                "title": "Frontend Pod Count",
+                "type": "stat",
+                "targets": [
+                  {
+                    "expr": "count(kube_pod_info{pod=~'frontend-web.*',namespace=~'openmarket-.*'})"
+                  }
+                ]
+              }
+            ]
+          },
+          {
+            "title": "Database Metrics",
+            "panels": [
+              {
+                "id": 7,
+                "title": "Database Connection Pool",
+                "type": "graph",
+                "targets": [
+                  {
+                    "expr": "sum(db_connection_pool_active{app='backend'}) by (pod)"
+                  }
+                ]
+              },
+              {
+                "id": 8,
+                "title": "Database Query Duration",
+                "type": "graph",
+                "targets": [
+                  {
+                    "expr": "histogram_quantile(0.95, sum(rate(db_query_duration_seconds_bucket[5m])) by (le))"
+                  }
+                ]
+              }
+            ]
+          },
+          {
+            "title": "Redis Cache Metrics",
+            "panels": [
+              {
+                "id": 9,
+                "title": "Cache Hit Rate",
+                "type": "graph",
+                "targets": [
+                  {
+                    "expr": "sum(rate(cache_hits_total[5m])) / (sum(rate(cache_hits_total[5m])) + sum(rate(cache_misses_total[5m]))) * 100"
+                  }
+                ],
+                "yaxes": [
+                  {
+                    "label": "Hit Rate %",
+                    "format": "percent"
+                  }
+                ]
+              },
+              {
+                "id": 10,
+                "title": "Cache Operations/sec",
+                "type": "graph",
+                "targets": [
+                  {
+                    "expr": "sum(rate(cache_operations_total[5m])) by (operation)"
+                  }
+                ]
+              }
+            ]
+          }
+        ]
+      }
+    }
+
+  # Node Exporter Dashboard
+  node-exporter.json: |
+    {
+      "dashboard": {
+        "title": "Node Exporter Full",
+        "tags": ["node-exporter"],
+        "timezone": "Asia/Seoul",
+        "panels": [
+          {
+            "id": 1,
+            "title": "CPU Usage",
+            "type": "graph",
+            "targets": [
+              {
+                "expr": "100 - (avg by (instance) (irate(node_cpu_seconds_total{mode='idle'}[5m])) * 100)"
+              }
+            ]
+          },
+          {
+            "id": 2,
+            "title": "Memory Usage",
+            "type": "graph",
+            "targets": [
+              {
+                "expr": "(node_memory_MemTotal_bytes - node_memory_MemAvailable_bytes) / node_memory_MemTotal_bytes * 100"
+              }
+            ]
+          },
+          {
+            "id": 3,
+            "title": "Disk I/O",
+            "type": "graph",
+            "targets": [
+              {
+                "expr": "rate(node_disk_read_bytes_total[5m])"
+              },
+              {
+                "expr": "rate(node_disk_written_bytes_total[5m])"
+              }
+            ]
+          },
+          {
+            "id": 4,
+            "title": "Network Traffic",
+            "type": "graph",
+            "targets": [
+              {
+                "expr": "rate(node_network_receive_bytes_total[5m])"
+              },
+              {
+                "expr": "rate(node_network_transmit_bytes_total[5m])"
+              }
+            ]
+          }
+        ]
+      }
+    }

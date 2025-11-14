@@ -1,0 +1,277 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: prometheus-config
+  namespace: monitoring
+data:
+  prometheus.yml: |
+    global:
+      scrape_interval: 15s
+      evaluation_interval: 15s
+      external_labels:
+        cluster: 'openmarket-eks'
+        environment: 'dev'
+
+    # Alertmanager configuration
+    alerting:
+      alertmanagers:
+        - static_configs:
+            - targets:
+                - alertmanager:9093
+
+    # Load rules once and periodically evaluate them
+    rule_files:
+      - /etc/prometheus/rules/*.yml
+
+    # Scrape configurations
+    scrape_configs:
+      # Prometheus self-monitoring
+      - job_name: 'prometheus'
+        static_configs:
+          - targets: ['localhost:9090']
+
+      # Kubernetes API server
+      - job_name: 'kubernetes-apiservers'
+        kubernetes_sd_configs:
+          - role: endpoints
+        scheme: https
+        tls_config:
+          ca_file: /var/run/secrets/kubernetes.io/serviceaccount/ca.crt
+        bearer_token_file: /var/run/secrets/kubernetes.io/serviceaccount/token
+        relabel_configs:
+          - source_labels: [__meta_kubernetes_namespace, __meta_kubernetes_service_name, __meta_kubernetes_endpoint_port_name]
+            action: keep
+            regex: default;kubernetes;https
+
+      # Kubernetes nodes
+      - job_name: 'kubernetes-nodes'
+        kubernetes_sd_configs:
+          - role: node
+        scheme: https
+        tls_config:
+          ca_file: /var/run/secrets/kubernetes.io/serviceaccount/ca.crt
+        bearer_token_file: /var/run/secrets/kubernetes.io/serviceaccount/token
+        relabel_configs:
+          - action: labelmap
+            regex: __meta_kubernetes_node_label_(.+)
+          - target_label: __address__
+            replacement: kubernetes.default.svc:443
+          - source_labels: [__meta_kubernetes_node_name]
+            regex: (.+)
+            target_label: __metrics_path__
+            replacement: /api/v1/nodes/${1}/proxy/metrics
+
+      # Kubernetes pods
+      - job_name: 'kubernetes-pods'
+        kubernetes_sd_configs:
+          - role: pod
+        relabel_configs:
+          - source_labels: [__meta_kubernetes_pod_annotation_prometheus_io_scrape]
+            action: keep
+            regex: true
+          - source_labels: [__meta_kubernetes_pod_annotation_prometheus_io_path]
+            action: replace
+            target_label: __metrics_path__
+            regex: (.+)
+          - source_labels: [__address__, __meta_kubernetes_pod_annotation_prometheus_io_port]
+            action: replace
+            regex: ([^:]+)(?::\d+)?;(\d+)
+            replacement: $1:$2
+            target_label: __address__
+          - action: labelmap
+            regex: __meta_kubernetes_pod_label_(.+)
+          - source_labels: [__meta_kubernetes_namespace]
+            action: replace
+            target_label: kubernetes_namespace
+          - source_labels: [__meta_kubernetes_pod_name]
+            action: replace
+            target_label: kubernetes_pod_name
+
+      # OpenMarket Backend
+      - job_name: 'openmarket-backend'
+        kubernetes_sd_configs:
+          - role: pod
+            namespaces:
+              names:
+                - openmarket-dev
+                - openmarket-staging
+                - openmarket-prod
+        relabel_configs:
+          - source_labels: [__meta_kubernetes_pod_label_app]
+            action: keep
+            regex: backend
+          - source_labels: [__meta_kubernetes_pod_container_port_number]
+            action: keep
+            regex: "3001"
+          - source_labels: [__meta_kubernetes_namespace]
+            target_label: namespace
+          - source_labels: [__meta_kubernetes_pod_name]
+            target_label: pod
+
+      # OpenMarket Frontend
+      - job_name: 'openmarket-frontend'
+        kubernetes_sd_configs:
+          - role: pod
+            namespaces:
+              names:
+                - openmarket-dev
+                - openmarket-staging
+                - openmarket-prod
+        relabel_configs:
+          - source_labels: [__meta_kubernetes_pod_label_app]
+            action: keep
+            regex: frontend-web
+          - source_labels: [__meta_kubernetes_pod_container_port_number]
+            action: keep
+            regex: "3000"
+          - source_labels: [__meta_kubernetes_namespace]
+            target_label: namespace
+          - source_labels: [__meta_kubernetes_pod_name]
+            target_label: pod
+
+      # Node Exporter
+      - job_name: 'node-exporter'
+        kubernetes_sd_configs:
+          - role: endpoints
+        relabel_configs:
+          - source_labels: [__meta_kubernetes_endpoints_name]
+            action: keep
+            regex: node-exporter
+          - source_labels: [__meta_kubernetes_namespace]
+            target_label: namespace
+          - source_labels: [__meta_kubernetes_pod_name]
+            target_label: pod
+
+      # Kube State Metrics
+      - job_name: 'kube-state-metrics'
+        static_configs:
+          - targets: ['kube-state-metrics.monitoring.svc.cluster.local:8080']
+
+  # Alert rules
+  alert-rules.yml: |
+    groups:
+      - name: openmarket-alerts
+        interval: 30s
+        rules:
+          # High CPU usage
+          - alert: HighCPUUsage
+            expr: |
+              100 - (avg by(instance) (irate(node_cpu_seconds_total{mode="idle"}[5m])) * 100) > 80
+            for: 5m
+            labels:
+              severity: warning
+              component: infrastructure
+            annotations:
+              summary: "High CPU usage detected"
+              description: "CPU usage is above 80% for {{ $labels.instance }} (current: {{ $value }}%)"
+
+          # High Memory usage
+          - alert: HighMemoryUsage
+            expr: |
+              (1 - (node_memory_MemAvailable_bytes / node_memory_MemTotal_bytes)) * 100 > 85
+            for: 5m
+            labels:
+              severity: warning
+              component: infrastructure
+            annotations:
+              summary: "High memory usage detected"
+              description: "Memory usage is above 85% for {{ $labels.instance }} (current: {{ $value }}%)"
+
+          # Pod restarts
+          - alert: PodRestarting
+            expr: |
+              rate(kube_pod_container_status_restarts_total[15m]) > 0
+            for: 5m
+            labels:
+              severity: warning
+              component: kubernetes
+            annotations:
+              summary: "Pod is restarting frequently"
+              description: "Pod {{ $labels.namespace }}/{{ $labels.pod }} is restarting frequently"
+
+          # Pod not ready
+          - alert: PodNotReady
+            expr: |
+              kube_pod_status_phase{phase!="Running"} > 0
+            for: 10m
+            labels:
+              severity: critical
+              component: kubernetes
+            annotations:
+              summary: "Pod is not ready"
+              description: "Pod {{ $labels.namespace }}/{{ $labels.pod }} is not in Running state"
+
+          # High API error rate
+          - alert: HighAPIErrorRate
+            expr: |
+              (sum(rate(http_requests_total{status=~"5.."}[5m])) by (service) /
+               sum(rate(http_requests_total[5m])) by (service)) * 100 > 5
+            for: 5m
+            labels:
+              severity: critical
+              component: application
+            annotations:
+              summary: "High API error rate"
+              description: "Service {{ $labels.service }} has error rate > 5% (current: {{ $value }}%)"
+
+          # High API latency
+          - alert: HighAPILatency
+            expr: |
+              histogram_quantile(0.95,
+                sum(rate(http_request_duration_seconds_bucket[5m])) by (le, service)
+              ) > 1
+            for: 10m
+            labels:
+              severity: warning
+              component: application
+            annotations:
+              summary: "High API latency"
+              description: "Service {{ $labels.service }} has P95 latency > 1s (current: {{ $value }}s)"
+
+          # RDS CPU high
+          - alert: RDSHighCPU
+            expr: |
+              aws_rds_cpuutilization_average > 80
+            for: 10m
+            labels:
+              severity: warning
+              component: database
+            annotations:
+              summary: "RDS CPU usage is high"
+              description: "RDS instance {{ $labels.dbinstance_identifier }} CPU > 80%"
+
+          # ElastiCache memory high
+          - alert: ElastiCacheHighMemory
+            expr: |
+              aws_elasticache_database_memory_usage_percentage_average > 90
+            for: 10m
+            labels:
+              severity: warning
+              component: cache
+            annotations:
+              summary: "ElastiCache memory usage is high"
+              description: "ElastiCache {{ $labels.cache_cluster_id }} memory > 90%"
+
+          # Disk space low
+          - alert: DiskSpaceLow
+            expr: |
+              (node_filesystem_avail_bytes{fstype!="tmpfs"} / node_filesystem_size_bytes) * 100 < 15
+            for: 10m
+            labels:
+              severity: warning
+              component: infrastructure
+            annotations:
+              summary: "Disk space is low"
+              description: "Disk space on {{ $labels.instance }} is below 15% (current: {{ $value }}%)"
+
+          # Deployment replica mismatch
+          - alert: DeploymentReplicaMismatch
+            expr: |
+              kube_deployment_spec_replicas != kube_deployment_status_replicas_available
+            for: 10m
+            labels:
+              severity: warning
+              component: kubernetes
+            annotations:
+              summary: "Deployment replica mismatch"
+              description: "Deployment {{ $labels.namespace }}/{{ $labels.deployment }} has mismatched replicas"
