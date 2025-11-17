@@ -14,11 +14,11 @@ describe("사용자 API 테스트", () => {
     try {
       for (const userId of testUserIds) {
         // 리뷰 등 연관 데이터 먼저 삭제
-        await prisma.review.deleteMany({
+        await prisma.Review.deleteMany({
           where: { userId: BigInt(userId) },
         });
         // 유저 삭제
-        await prisma.user.deleteMany({ where: { id: BigInt(userId) } });
+        await prisma.users.deleteMany({ where: { id: BigInt(userId) } });
       }
     } catch (e) {
       // 이미 삭제된 경우 무시

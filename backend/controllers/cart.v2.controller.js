@@ -62,18 +62,18 @@ exports.addToCartV2 = async (req, res) => {
     }
 
     // 사용자 장바구니 조회 또는 생성
-    let cart = await prisma.cart.findFirst({
+    let cart = await prisma.Cart.findFirst({
       where: { userId: parsedUserId }
     });
 
     if (!cart) {
-      cart = await prisma.cart.create({
+      cart = await prisma.Cart.create({
         data: { userId: parsedUserId }
       });
     }
 
     // 기존 장바구니 아이템 확인
-    const existingItem = await prisma.cartItem.findFirst({
+    const existingItem = await prisma.CartItem.findFirst({
       where: {
         cartId: cart.id,
         productId: parsedProductId,
@@ -153,7 +153,7 @@ exports.getCartByUserV2 = async (req, res) => {
     const { userId } = req.params;
     const parsedUserId = parseBigIntId(userId);
 
-    const cart = await prisma.cart.findFirst({
+    const cart = await prisma.Cart.findFirst({
       where: { userId: parsedUserId },
       include: {
         items: {
@@ -243,7 +243,7 @@ exports.updateCartItemV2 = async (req, res) => {
       return res.status(400).json({ error: "수량은 1개 이상이어야 합니다." });
     }
 
-    const cartItem = await prisma.cartItem.findUnique({
+    const cartItem = await prisma.CartItem.findUnique({
       where: { id: parsedItemId },
       include: {
         product: true,
@@ -321,7 +321,7 @@ exports.removeCartItemV2 = async (req, res) => {
     const { itemId } = req.params;
     const parsedItemId = parseBigIntId(itemId);
 
-    const cartItem = await prisma.cartItem.findUnique({
+    const cartItem = await prisma.CartItem.findUnique({
       where: { id: parsedItemId },
       include: {
         sku: true

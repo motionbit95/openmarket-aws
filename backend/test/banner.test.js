@@ -16,7 +16,7 @@ describe("배너 API 테스트", () => {
 
   beforeAll(async () => {
     // 테스트용 Attachment 생성 (Banner 생성에 필요)
-    testAttachment = await prisma.attachment.create({
+    testAttachment = await prisma.attachments.create({
       data: {
         target_type: "Banner",
         target_id: 0, // 임시값
@@ -33,11 +33,11 @@ describe("배너 API 테스트", () => {
   afterAll(async () => {
     // 테스트 데이터 정리
     if (testBanner)
-      await prisma.banner
+      await prisma.banners
         .delete({ where: { id: BigInt(testBanner.id) } })
         .catch(() => {});
     if (testAttachment)
-      await prisma.attachment
+      await prisma.attachments
         .delete({ where: { id: testAttachment.id } })
         .catch(() => {});
     await prisma.$disconnect();

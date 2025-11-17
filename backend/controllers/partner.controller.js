@@ -73,7 +73,7 @@ const getPartnerOrders = async (req, res) => {
     }
 
     const [orders, totalCount] = await Promise.all([
-      prisma.order.findMany({
+      prisma.Order.findMany({
         where: whereConditions,
         include: {
           users: {
@@ -110,7 +110,7 @@ const getPartnerOrders = async (req, res) => {
         skip: offset,
         take: parseInt(limit),
       }),
-      prisma.order.count({ where: whereConditions }),
+      prisma.Order.count({ where: whereConditions }),
     ]);
 
     // 데이터 변환
@@ -184,7 +184,7 @@ const getPartnerOrderDetail = async (req, res) => {
       });
     }
 
-    const order = await prisma.order.findUnique({
+    const order = await prisma.Order.findUnique({
       where: { id: BigInt(orderId) },
       include: {
         users: {
@@ -314,7 +314,7 @@ const updateOrderStatus = async (req, res) => {
       // 추후 배송 테이블 구현 시 운송장 정보 저장
     }
 
-    const updatedOrder = await prisma.order.update({
+    const updatedOrder = await prisma.Order.update({
       where: { id: BigInt(orderId) },
       data: updateData,
       include: {
@@ -447,7 +447,7 @@ const getPartnerDeliveries = async (req, res) => {
     }
 
     const [orders, totalCount] = await Promise.all([
-      prisma.order.findMany({
+      prisma.Order.findMany({
         where: whereConditions,
         include: {
           users: {
@@ -483,7 +483,7 @@ const getPartnerDeliveries = async (req, res) => {
         skip: offset,
         take: limitNum,
       }),
-      prisma.order.count({ where: whereConditions }),
+      prisma.Order.count({ where: whereConditions }),
     ]);
 
     const deliveries = orders.map((order, index) => {
@@ -914,7 +914,7 @@ const processReturn = async (req, res) => {
     const newStatus = action === "approve" ? "APPROVED" : "REJECTED";
 
     // 주문 조회
-    const order = await prisma.order.findUnique({
+    const order = await prisma.Order.findUnique({
       where: { id: BigInt(returnId) },
       include: {
         OrderItem: true,
@@ -931,7 +931,7 @@ const processReturn = async (req, res) => {
     // 모든 주문 아이템의 optionSnapshot에 반품 상태 저장
     for (const item of order.OrderItem) {
       const currentSnapshot = item.optionSnapshot || {};
-      await prisma.orderItem.update({
+      await prisma.OrderItem.update({
         where: { id: item.id },
         data: {
           optionSnapshot: {
@@ -971,7 +971,7 @@ const startInspection = async (req, res) => {
     const { returnId } = req.params;
 
     // 주문 조회
-    const order = await prisma.order.findUnique({
+    const order = await prisma.Order.findUnique({
       where: { id: BigInt(returnId) },
       include: {
         OrderItem: true,
@@ -988,7 +988,7 @@ const startInspection = async (req, res) => {
     // 모든 주문 아이템의 optionSnapshot에 검수 시작 상태 저장
     for (const item of order.OrderItem) {
       const currentSnapshot = item.optionSnapshot || {};
-      await prisma.orderItem.update({
+      await prisma.OrderItem.update({
         where: { id: item.id },
         data: {
           optionSnapshot: {
@@ -1040,7 +1040,7 @@ const schedulePickup = async (req, res) => {
     }
 
     // 주문 조회
-    const order = await prisma.order.findUnique({
+    const order = await prisma.Order.findUnique({
       where: { id: BigInt(returnId) },
       include: {
         OrderItem: true,
@@ -1070,7 +1070,7 @@ const schedulePickup = async (req, res) => {
 
       console.log('저장할 optionSnapshot:', updatedSnapshot);
 
-      await prisma.orderItem.update({
+      await prisma.OrderItem.update({
         where: { id: item.id },
         data: {
           optionSnapshot: updatedSnapshot,
@@ -1108,7 +1108,7 @@ const completeReturn = async (req, res) => {
     const { returnId } = req.params;
 
     // 주문 조회
-    const order = await prisma.order.findUnique({
+    const order = await prisma.Order.findUnique({
       where: { id: BigInt(returnId) },
       include: {
         OrderItem: true,
@@ -1125,7 +1125,7 @@ const completeReturn = async (req, res) => {
     // 모든 주문 아이템의 optionSnapshot에 반품 완료 상태 저장
     for (const item of order.OrderItem) {
       const currentSnapshot = item.optionSnapshot || {};
-      await prisma.orderItem.update({
+      await prisma.OrderItem.update({
         where: { id: item.id },
         data: {
           optionSnapshot: {
@@ -1138,7 +1138,7 @@ const completeReturn = async (req, res) => {
     }
 
     // 주문 상태를 RETURNED로, 결제 상태를 CANCELLED로 변경 (환불 처리)
-    await prisma.order.update({
+    await prisma.Order.update({
       where: { id: BigInt(returnId) },
       data: {
         orderStatus: "RETURNED",
@@ -1229,7 +1229,7 @@ const getPartnerSettlements = async (req, res) => {
     }
 
     const [settlements, totalCount] = await Promise.all([
-      prisma.settlement.findMany({
+      prisma.Settlement.findMany({
         where: whereConditions,
         include: {
           SettlementPeriod: true,
@@ -1247,7 +1247,7 @@ const getPartnerSettlements = async (req, res) => {
         skip: offset,
         take: parseInt(limit),
       }),
-      prisma.settlement.count({ where: whereConditions }),
+      prisma.Settlement.count({ where: whereConditions }),
     ]);
 
     const transformedSettlements = settlements.map((settlement) => ({
@@ -1328,7 +1328,7 @@ const getProductSettlements = async (req, res) => {
     }
 
     // 정산 아이템들 조회 (상품별로 그룹화)
-    const settlementItems = await prisma.settlementItem.findMany({
+    const settlementItems = await prisma.SettlementItem.findMany({
       include: {
         Settlement: {
           include: {
@@ -1561,7 +1561,7 @@ const getProductSettlementDetail = async (req, res) => {
 
     // ID로 찾지 못한 경우, 정산 아이템에서 상품명으로 상품 찾기
     if (!product) {
-      const settlementItem = await prisma.settlementItem.findFirst({
+      const settlementItem = await prisma.SettlementItem.findFirst({
         where: {
           Settlement: {
             sellerId: BigInt(sellerId),
@@ -1595,7 +1595,7 @@ const getProductSettlementDetail = async (req, res) => {
     }
 
     // 해당 상품의 정산 아이템들 조회
-    const settlementItems = await prisma.settlementItem.findMany({
+    const settlementItems = await prisma.SettlementItem.findMany({
       where: {
         productName: product.displayName,
         Settlement: {
@@ -1707,7 +1707,7 @@ const getSettlementDetail = async (req, res) => {
   try {
     const { settlementId } = req.params;
 
-    const settlement = await prisma.settlement.findUnique({
+    const settlement = await prisma.Settlement.findUnique({
       where: { id: BigInt(settlementId) },
       include: {
         SettlementPeriod: true,

@@ -25,7 +25,7 @@ function serializeBigInt(obj) {
 
 exports.getAllInquiries = async (req, res) => {
   try {
-    const inquiries = await prisma.inquiry.findMany({
+    const inquiries = await prisma.Inquiry.findMany({
       orderBy: { createdAt: "desc" },
     });
 
@@ -76,7 +76,7 @@ exports.getInquiryById = async (req, res) => {
 
   try {
     // 1. 문의 기본 정보 조회
-    const inquiry = await prisma.inquiry.findUnique({
+    const inquiry = await prisma.Inquiry.findUnique({
       where: { id: BigInt(id) },
     });
 
@@ -131,7 +131,7 @@ exports.createInquiry = async (req, res) => {
     return res.status(400).json({ error: "Missing required fields" });
   }
   try {
-    const newInquiry = await prisma.inquiry.create({
+    const newInquiry = await prisma.Inquiry.create({
       data: {
         senderId: BigInt(senderId),
         senderType,
@@ -154,7 +154,7 @@ exports.updateInquiry = async (req, res) => {
   if (!id) return res.status(400).json({ error: "Missing id parameter" });
 
   try {
-    const updatedInquiry = await prisma.inquiry.update({
+    const updatedInquiry = await prisma.Inquiry.update({
       where: { id: BigInt(id) },
       data: {
         senderId: senderId !== undefined ? BigInt(senderId) : undefined,
@@ -177,7 +177,7 @@ exports.deleteInquiry = async (req, res) => {
   if (!id) return res.status(400).json({ error: "Missing id parameter" });
 
   try {
-    await prisma.inquiry.delete({
+    await prisma.Inquiry.delete({
       where: { id: BigInt(id) },
     });
     res.status(204).end();
@@ -198,12 +198,12 @@ exports.answerInquiry = async (req, res) => {
   }
 
   try {
-    const updatedInquiry = await prisma.inquiry.update({
+    const updatedInquiry = await prisma.Inquiry.update({
       where: { id: BigInt(id) },
       data: {
         answer,
         answeredAt: new Date(),
-        status: "답변완료", // 답변 시 상태를 답변완료로
+        status: "완료", // 답변 시 상태를 완료로
       },
     });
 
@@ -251,7 +251,7 @@ exports.getAllInquiryBySeller = async (req, res) => {
     }
 
     // 해당 판매자가 받은 모든 문의 조회 (상품 문의 등)
-    const inquiries = await prisma.inquiry.findMany({
+    const inquiries = await prisma.Inquiry.findMany({
       where: {
         // Product의 sellerId가 일치하는 문의만 조회
         Product: {
@@ -322,7 +322,7 @@ exports.getAllInquiryBySellerToAdmin = async (req, res) => {
 
     // senderId가 sellerId이고 senderType이 'seller'인 문의만 조회 (product 정보 없음)
     // senderType은 대소문자 구분 없이 처리
-    const inquiries = await prisma.inquiry.findMany({
+    const inquiries = await prisma.Inquiry.findMany({
       where: {
         senderId: BigInt(sellerId),
         OR: [
@@ -365,7 +365,7 @@ exports.getAllInquiryBySellerToAdmin = async (req, res) => {
 
 exports.getLatelyInquires = async (req, res) => {
   try {
-    const inquiries = await prisma.inquiry.findMany({
+    const inquiries = await prisma.Inquiry.findMany({
       orderBy: { createdAt: "desc" },
       take: 5, // 최근 5개만 조회
     });
@@ -420,7 +420,7 @@ exports.getInquiriesByUserId = async (req, res) => {
     return res.status(400).json({ error: "Missing userId parameter" });
   }
   try {
-    const inquiries = await prisma.inquiry.findMany({
+    const inquiries = await prisma.Inquiry.findMany({
       where: {
         senderType: "user",
         senderId: BigInt(userId),

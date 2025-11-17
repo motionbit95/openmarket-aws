@@ -20,7 +20,7 @@ describe("사용자 관심상품 API 테스트", () => {
     prisma = new PrismaClient();
 
     // 유저 생성
-    const user = await prisma.user.create({
+    const user = await prisma.users.create({
       data: {
         user_name: "testuser_like",
         email: `testuser_like_${Date.now()}@test.com`,
@@ -31,7 +31,7 @@ describe("사용자 관심상품 API 테스트", () => {
 
     // 상품 생성 (seller 필요)
     // 임시 seller 생성
-    const seller = await prisma.seller.create({
+    const seller = await prisma.sellers.create({
       data: {
         name: "test seller",
         email: `seller_like_${Date.now()}@test.com`,
@@ -84,14 +84,14 @@ describe("사용자 관심상품 API 테스트", () => {
 
       // seller 삭제 (상품이 먼저 삭제되어야 함)
       if (prisma.seller) {
-        await prisma.seller.deleteMany({
+        await prisma.sellers.deleteMany({
           where: { shop_name: "test shop" },
         });
       }
 
       // 유저 삭제
       if (prisma.user) {
-        await prisma.user.deleteMany({
+        await prisma.users.deleteMany({
           where: { id: BigInt(userId) },
         });
       }

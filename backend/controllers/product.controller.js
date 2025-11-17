@@ -22,12 +22,20 @@ exports.createProduct = async (req, res) => {
       prices,
       delivery,
       returns,
+      ProductPrice,
+      ProductDelivery,
+      ProductReturn,
       images,
       optionGroups,
       infoNotices,
       refundNotice,
       isSingleProduct = true,
     } = req.body;
+
+    // Support both camelCase and PascalCase naming
+    const priceData = prices || ProductPrice;
+    const deliveryData = delivery || ProductDelivery;
+    const returnData = returns || ProductReturn;
 
     // Ensure sellerId is a BigInt if needed
     let parsedSellerId = sellerId;
@@ -63,19 +71,19 @@ exports.createProduct = async (req, res) => {
 
     // Create related records in parallel if provided
     await Promise.all([
-      prices
+      priceData
         ? prisma.productPrice.create({
-            data: { ...prices, productId },
+            data: { ...priceData, productId },
           })
         : null,
-      delivery
+      deliveryData
         ? prisma.productDelivery.create({
-            data: { ...delivery, productId },
+            data: { ...deliveryData, productId },
           })
         : null,
-      returns
+      returnData
         ? prisma.productReturn.create({
-            data: { ...returns, productId },
+            data: { ...returnData, productId },
           })
         : null,
       images && images.length
@@ -134,7 +142,21 @@ exports.createProduct = async (req, res) => {
       },
     });
 
-    res.status(201).json(convertBigIntToString(fullProduct));
+    // Transform response to match test expectations
+    const response = {
+      ...fullProduct,
+      prices: fullProduct.ProductPrice?.[0] || fullProduct.ProductPrice,
+      delivery: fullProduct.ProductDelivery?.[0] || fullProduct.ProductDelivery,
+      returns: fullProduct.ProductReturn?.[0] || fullProduct.ProductReturn,
+      images: fullProduct.ProductImage || [],
+      optionGroups: fullProduct.ProductOptionGroup?.map(group => ({
+        ...group,
+        options: group.ProductOptionValue || []
+      })) || [],
+      infoNotices: fullProduct.ProductInfoNotice || [],
+    };
+
+    res.status(201).json(convertBigIntToString(response));
   } catch (error) {
     console.error(error);
     res.status(500).json({ message: "상품 등록 중 오류 발생" });
@@ -446,13 +468,13 @@ exports.getProductById = async (req, res) => {
           category: relatedProduct.categoryCode,
           brand: relatedProduct.brand,
           manufacturer: relatedProduct.manufacturer,
-          salePrice: relatedProduct.prices?.salePrice || 0,
-          originalPrice: relatedProduct.prices?.originalPrice || 0,
-          discountRate: relatedProduct.prices?.discountRate || 0,
-          mainImage: relatedProduct.images[0]?.url || null,
-          isMainImage: relatedProduct.images[0]?.isMain || false,
-          reviewCount: relatedProduct._count.reviews,
-          likeCount: relatedProduct._count.likedByUsers,
+          salePrice: relatedProduct.ProductPrice?.salePrice || 0,
+          originalPrice: relatedProduct.ProductPrice?.originalPrice || 0,
+          discountRate: relatedProduct.ProductPrice?.discountRate || 0,
+          mainImage: relatedProduct.ProductImage?.[0]?.url || null,
+          isMainImage: relatedProduct.ProductImage?.[0]?.isMain || false,
+          reviewCount: relatedProduct._count?.Review || 0,
+          likeCount: relatedProduct._count?.UserLikeProduct || 0,
         }));
       }
     } catch (error) {
@@ -461,13 +483,22 @@ exports.getProductById = async (req, res) => {
       relatedProducts = [];
     }
 
-    // 연관상품을 응답에 추가
-    const responseData = {
-      ...convertBigIntToString(product),
-      relatedProducts: convertBigIntToString(relatedProducts),
+    // Transform response to match test expectations
+    const response = {
+      ...product,
+      prices: product.ProductPrice?.[0] || product.ProductPrice,
+      delivery: product.ProductDelivery?.[0] || product.ProductDelivery,
+      returns: product.ProductReturn?.[0] || product.ProductReturn,
+      images: product.ProductImage || [],
+      optionGroups: product.ProductOptionGroup?.map(group => ({
+        ...group,
+        options: group.ProductOptionValue || []
+      })) || [],
+      infoNotices: product.ProductInfoNotice || [],
+      relatedProducts: relatedProducts,
     };
 
-    res.json(responseData);
+    res.json(convertBigIntToString(response));
   } catch (error) {
     console.error(error);
     res.status(500).json({ message: "상품 조회 오류" });
@@ -496,11 +527,19 @@ exports.updateProduct = async (req, res) => {
       prices,
       delivery,
       returns,
+      ProductPrice,
+      ProductDelivery,
+      ProductReturn,
       images,
       optionGroups,
       infoNotices,
       refundNotice,
     } = req.body;
+
+    // Support both camelCase and PascalCase naming
+    const priceData = prices || ProductPrice;
+    const deliveryData = delivery || ProductDelivery;
+    const returnData = returns || ProductReturn;
 
     await prisma.$transaction(async (tx) => {
       // 1) 기본 정보 업데이트
@@ -529,7 +568,7 @@ exports.updateProduct = async (req, res) => {
       // 먼저 ProductOptionValue 삭제 (ProductOptionGroup을 참조)
       await tx.productOptionValue.deleteMany({
         where: {
-          optionGroup: { productId: BigInt(id) },
+          ProductOptionGroup: { productId: BigInt(id) },
         },
       });
 
@@ -548,21 +587,21 @@ exports.updateProduct = async (req, res) => {
       ]);
 
       // 3) 연관 데이터 재생성
-      if (prices) {
+      if (priceData) {
         await tx.productPrice.create({
-          data: { ...prices, productId: BigInt(id) },
+          data: { ...priceData, productId: BigInt(id) },
         });
       }
 
-      if (delivery) {
+      if (deliveryData) {
         await tx.productDelivery.create({
-          data: { ...delivery, productId: BigInt(id) },
+          data: { ...deliveryData, productId: BigInt(id) },
         });
       }
 
-      if (returns) {
+      if (returnData) {
         await tx.productReturn.create({
-          data: { ...returns, productId: BigInt(id) },
+          data: { ...returnData, productId: BigInt(id) },
         });
       }
 
@@ -631,7 +670,21 @@ exports.updateProduct = async (req, res) => {
       },
     });
 
-    res.json(convertBigIntToString(updatedProduct));
+    // Transform response to match test expectations
+    const response = {
+      ...updatedProduct,
+      prices: updatedProduct.ProductPrice?.[0] || updatedProduct.ProductPrice,
+      delivery: updatedProduct.ProductDelivery?.[0] || updatedProduct.ProductDelivery,
+      returns: updatedProduct.ProductReturn?.[0] || updatedProduct.ProductReturn,
+      images: updatedProduct.ProductImage || [],
+      optionGroups: updatedProduct.ProductOptionGroup?.map(group => ({
+        ...group,
+        options: group.ProductOptionValue || []
+      })) || [],
+      infoNotices: updatedProduct.ProductInfoNotice || [],
+    };
+
+    res.json(convertBigIntToString(response));
   } catch (error) {
     console.error(error);
     res.status(500).json({ message: "상품 수정 오류" });
@@ -648,7 +701,7 @@ exports.deleteProduct = async (req, res) => {
       // 먼저 ProductOptionValue 삭제 (ProductOptionGroup을 참조)
       await tx.productOptionValue.deleteMany({
         where: {
-          optionGroup: { productId: BigInt(id) },
+          ProductOptionGroup: { productId: BigInt(id) },
         },
       });
 

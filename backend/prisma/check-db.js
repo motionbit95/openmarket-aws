@@ -9,8 +9,8 @@ async function main() {
   try {
     const counts = {
       // 기본 엔티티
-      sellers: await prisma.seller.count(),
-      users: await prisma.user.count(),
+      sellers: await prisma.sellers.count(),
+      users: await prisma.users.count(),
       addresses: await prisma.userAddress.count(),
       
       // 상품 관련

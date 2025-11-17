@@ -101,7 +101,7 @@ exports.createOrderFromCart = async (req, res) => {
       return res.status(400).json({ error: "유효하지 않은 배송지 ID입니다." });
     }
 
-    const address = await prisma.userAddress.findUnique({
+    const address = await prisma.user_addresses.findUnique({
       where: { id: parsedAddressId },
     });
 
@@ -110,23 +110,23 @@ exports.createOrderFromCart = async (req, res) => {
     }
 
     // 장바구니 조회
-    const cart = await prisma.cart.findFirst({
+    const cart = await prisma.Cart.findFirst({
       where: { userId: parsedUserId },
       include: {
-        items: {
+        CartItem: {
           include: {
-            product: {
+            Product: {
               include: {
-                prices: true,
+                ProductPrice: true,
               },
             },
-            sku: true,
+            ProductSKU: true,
           },
         },
       },
     });
 
-    if (!cart || cart.items.length === 0) {
+    if (!cart || cart.CartItem.length === 0) {
       return res.status(400).json({ error: "장바구니가 비어있습니다." });
     }
 
@@ -138,14 +138,14 @@ exports.createOrderFromCart = async (req, res) => {
       const parsedCouponId = parseBigIntId(usedCouponId);
 
       // 사용자가 보유한 쿠폰인지 확인
-      const userCoupon = await prisma.userCoupon.findFirst({
+      const userCoupon = await prisma.UserCoupon.findFirst({
         where: {
           userId: parsedUserId,
           couponId: parsedCouponId,
           used: false,
         },
         include: {
-          coupon: true,
+          Coupon: true,
         },
       });
 
@@ -153,7 +153,7 @@ exports.createOrderFromCart = async (req, res) => {
         return res.status(400).json({ error: "사용할 수 없는 쿠폰입니다." });
       }
 
-      usedCoupon = userCoupon.coupon;
+      usedCoupon = userCoupon.Coupon;
 
       // 쿠폰 유효성 검증 (만료일 등)
       const now = new Date();
@@ -166,7 +166,7 @@ exports.createOrderFromCart = async (req, res) => {
     let totalAmount = 0;
     const orderItems = [];
 
-    for (const cartItem of cart.items) {
+    for (const cartItem of cart.CartItem) {
       const unitPrice = cartItem.price;
       const totalPrice = unitPrice * cartItem.quantity;
       totalAmount += totalPrice;
@@ -177,7 +177,7 @@ exports.createOrderFromCart = async (req, res) => {
         quantity: cartItem.quantity,
         unitPrice: unitPrice,
         totalPrice: totalPrice,
-        productName: cartItem.product.displayName,
+        productName: cartItem.Product.displayName,
       });
     }
 
@@ -234,15 +234,15 @@ exports.createOrderFromCart = async (req, res) => {
           finalAmount,
           paymentMethod,
           usedCouponId: usedCoupon ? parseBigIntId(usedCouponId) : null,
-          orderItems: {
+          OrderItem: {
             create: orderItems,
           },
         },
         include: {
-          orderItems: {
+          OrderItem: {
             include: {
-              product: true,
-              sku: true,
+              Product: true,
+              ProductSKU: true,
             },
           },
         },
@@ -291,14 +291,14 @@ exports.getUserOrders = async (req, res) => {
     const { userId } = req.params;
     const parsedUserId = parseBigIntId(userId);
 
-    const orders = await prisma.order.findMany({
+    const orders = await prisma.Order.findMany({
       where: { userId: parsedUserId },
       include: {
-        orderItems: {
+        OrderItem: {
           include: {
-            product: {
+            Product: {
               include: {
-                images: {
+                ProductImage: {
                   where: { isMain: true },
                   take: 1,
                 },
@@ -310,7 +310,15 @@ exports.getUserOrders = async (req, res) => {
       orderBy: { createdAt: "desc" },
     });
 
-    res.json(convertBigIntToString(orders));
+    // OrderItem을 orderItems로 매핑
+    const ordersResponse = orders.map(order => ({
+      ...order,
+      orderItems: order.OrderItem || [],
+    }));
+    // OrderItem 필드 제거
+    ordersResponse.forEach(order => delete order.OrderItem);
+
+    res.json(convertBigIntToString(ordersResponse));
   } catch (error) {
     res
       .status(500)
@@ -327,14 +335,14 @@ exports.getOrderById = async (req, res) => {
     const { orderId } = req.params;
     const parsedOrderId = parseBigIntId(orderId);
 
-    const order = await prisma.order.findUnique({
+    const order = await prisma.Order.findUnique({
       where: { id: parsedOrderId },
       include: {
-        orderItems: {
+        OrderItem: {
           include: {
-            product: {
+            Product: {
               include: {
-                images: {
+                ProductImage: {
                   where: { isMain: true },
                   take: 1,
                 },
@@ -342,8 +350,8 @@ exports.getOrderById = async (req, res) => {
             },
           },
         },
-        usedCoupon: true,
-        user: {
+        Coupon: true,
+        users: {
           select: {
             id: true,
             user_name: true,
@@ -357,7 +365,16 @@ exports.getOrderById = async (req, res) => {
       return res.status(404).json({ error: "주문을 찾을 수 없습니다." });
     }
 
-    res.json(convertBigIntToString(order));
+    // OrderItem을 orderItems로, users를 user로 매핑
+    const orderResponse = {
+      ...order,
+      orderItems: order.OrderItem || [],
+      user: order.users || null,
+    };
+    delete orderResponse.OrderItem;
+    delete orderResponse.users;
+
+    res.json(convertBigIntToString(orderResponse));
   } catch (error) {
     res.status(500).json({ error: "주문 조회 실패", details: error.message });
   }
@@ -383,11 +400,11 @@ exports.updateOrderStatus = async (req, res) => {
       updateData.paidAt = new Date();
     }
 
-    const updatedOrder = await prisma.order.update({
+    const updatedOrder = await prisma.Order.update({
       where: { id: parsedOrderId },
       data: updateData,
       include: {
-        orderItems: true,
+        OrderItem: true,
       },
     });
 
@@ -412,7 +429,7 @@ exports.cancelOrder = async (req, res) => {
     const { reason } = req.body;
     const parsedOrderId = parseBigIntId(orderId);
 
-    const order = await prisma.order.findUnique({
+    const order = await prisma.Order.findUnique({
       where: { id: parsedOrderId },
     });
 
@@ -428,7 +445,7 @@ exports.cancelOrder = async (req, res) => {
       return res.status(400).json({ error: "취소할 수 없는 주문입니다." });
     }
 
-    const updatedOrder = await prisma.order.update({
+    const updatedOrder = await prisma.Order.update({
       where: { id: parsedOrderId },
       data: {
         orderStatus: "CANCELLED",
@@ -465,7 +482,7 @@ exports.createDirectOrder = async (req, res) => {
       return res.status(400).json({ error: "유효하지 않은 배송지 ID입니다." });
     }
 
-    const address = await prisma.userAddress.findUnique({
+    const address = await prisma.user_addresses.findUnique({
       where: { id: parsedAddressId },
     });
 
@@ -497,7 +514,7 @@ exports.createDirectOrder = async (req, res) => {
 
     // 주문 생성
     const orderNumber = generateOrderNumber();
-    const order = await prisma.order.create({
+    const order = await prisma.Order.create({
       data: {
         orderNumber,
         userId: parsedUserId,
@@ -519,7 +536,7 @@ exports.createDirectOrder = async (req, res) => {
     });
 
     // 주문 아이템 생성
-    await prisma.orderItem.create({
+    await prisma.OrderItem.create({
       data: {
         orderId: order.id,
         productId: parseBigIntId(productId),
@@ -542,10 +559,10 @@ exports.createDirectOrder = async (req, res) => {
     });
 
     // 주문 정보 다시 조회 (관련 데이터 포함)
-    const createdOrder = await prisma.order.findUnique({
+    const createdOrder = await prisma.Order.findUnique({
       where: { id: order.id },
       include: {
-        orderItems: {
+        OrderItem: {
           include: {
             product: true,
             sku: true,

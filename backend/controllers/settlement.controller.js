@@ -32,7 +32,7 @@ exports.getSettlements = async (req, res) => {
         }),
     };
 
-    const settlements = await prisma.settlement.findMany({
+    const settlements = await prisma.Settlement.findMany({
       where,
       include: {
         sellers: {
@@ -59,7 +59,7 @@ exports.getSettlements = async (req, res) => {
       take: parseInt(limit),
     });
 
-    const total = await prisma.settlement.count({ where });
+    const total = await prisma.Settlement.count({ where });
 
     // 데이터 변환
     const transformedSettlements = settlements.map((settlement) => {
@@ -114,7 +114,7 @@ exports.processSettlements = async (req, res) => {
     const parsedIds = settlementIds.map((id) => parseBigIntId(id));
 
     // 정산 대기 상태인 항목만 처리
-    const settlements = await prisma.settlement.findMany({
+    const settlements = await prisma.Settlement.findMany({
       where: {
         id: { in: parsedIds },
         status: "PENDING",
@@ -183,7 +183,7 @@ exports.completeSettlements = async (req, res) => {
     const parsedIds = settlementIds.map((id) => parseBigIntId(id));
 
     // 정산 처리중 상태인 항목만 완료 처리
-    const settlements = await prisma.settlement.findMany({
+    const settlements = await prisma.Settlement.findMany({
       where: {
         id: { in: parsedIds },
         status: "CALCULATING",
@@ -228,7 +228,7 @@ exports.createSettlementPeriod = async (req, res) => {
   try {
     const { periodType, startDate, endDate, settlementDate } = req.body;
 
-    const period = await prisma.settlementPeriod.create({
+    const period = await prisma.SettlementPeriod.create({
       data: {
         periodType,
         startDate: new Date(startDate),
@@ -289,7 +289,7 @@ exports.createSettlement = async (req, res) => {
       totalCancelAmount +
       adjustmentAmount;
 
-    const settlement = await prisma.settlement.create({
+    const settlement = await prisma.Settlement.create({
       data: {
         settlementPeriodId: parseBigIntId(settlementPeriodId),
         sellerId: parseBigIntId(sellerId),
@@ -343,7 +343,7 @@ exports.calculateSettlement = async (req, res) => {
     const parsedPeriodId = parseBigIntId(periodId);
 
     // 정산 기간 조회
-    const period = await prisma.settlementPeriod.findUnique({
+    const period = await prisma.SettlementPeriod.findUnique({
       where: { id: parsedPeriodId },
     });
 
@@ -356,13 +356,13 @@ exports.calculateSettlement = async (req, res) => {
     }
 
     // 정산 기간 상태 변경
-    await prisma.settlementPeriod.update({
+    await prisma.SettlementPeriod.update({
       where: { id: parsedPeriodId },
       data: { status: "PROCESSING" },
     });
 
     // 해당 기간의 완료된 주문들 조회 (Product와 Seller 정보 포함)
-    const orders = await prisma.order.findMany({
+    const orders = await prisma.Order.findMany({
       where: {
         createdAt: {
           gte: period.startDate,
@@ -374,11 +374,11 @@ exports.calculateSettlement = async (req, res) => {
         },
       },
       include: {
-        orderItems: {
+        OrderItem: {
           include: {
-            product: {
+            Product: {
               include: {
-                prices: true,
+                ProductPrice: true,
               },
             },
           },
@@ -390,9 +390,9 @@ exports.calculateSettlement = async (req, res) => {
     const sellerOrderMap = new Map();
 
     for (const order of orders) {
-      for (const orderItem of order.orderItems) {
+      for (const orderItem of order.OrderItem) {
         // Product에서 sellerId를 가져와야 함 (스키마에 sellerId가 있다고 가정)
-        const sellerId = orderItem.product.sellerId;
+        const sellerId = orderItem.Product.sellerId;
 
         if (!sellerOrderMap.has(sellerId.toString())) {
           sellerOrderMap.set(sellerId.toString(), {
@@ -455,7 +455,7 @@ exports.calculateSettlement = async (req, res) => {
         totalOrderAmount - totalCommission - totalDeliveryFee;
 
       // 정산 생성
-      const settlement = await prisma.settlement.create({
+      const settlement = await prisma.Settlement.create({
         data: {
           settlementPeriodId: parsedPeriodId,
           sellerId,
@@ -480,7 +480,7 @@ exports.calculateSettlement = async (req, res) => {
     }
 
     // 정산 기간 상태 완료로 변경
-    await prisma.settlementPeriod.update({
+    await prisma.SettlementPeriod.update({
       where: { id: parsedPeriodId },
       data: { status: "COMPLETED" },
     });
@@ -496,7 +496,7 @@ exports.calculateSettlement = async (req, res) => {
 
     // 오류 시 정산 기간 상태 되돌리기
     try {
-      await prisma.settlementPeriod.update({
+      await prisma.SettlementPeriod.update({
         where: { id: parseBigIntId(req.params.periodId) },
         data: { status: "PREPARING" },
       });
@@ -525,7 +525,7 @@ exports.getSellerSettlements = async (req, res) => {
       where.status = status;
     }
 
-    const settlements = await prisma.settlement.findMany({
+    const settlements = await prisma.Settlement.findMany({
       where,
       include: {
         SettlementPeriod: true,
@@ -538,7 +538,7 @@ exports.getSellerSettlements = async (req, res) => {
       take: parseInt(limit),
     });
 
-    const total = await prisma.settlement.count({ where });
+    const total = await prisma.Settlement.count({ where });
 
     res.json({
       settlements: convertBigIntToString(settlements),
@@ -567,7 +567,7 @@ exports.getSettlementById = async (req, res) => {
     const { settlementId } = req.params;
     const parsedSettlementId = parseBigIntId(settlementId);
 
-    const settlement = await prisma.settlement.findUnique({
+    const settlement = await prisma.Settlement.findUnique({
       where: { id: parsedSettlementId },
       include: {
         sellers: {
@@ -591,9 +591,18 @@ exports.getSettlementById = async (req, res) => {
       return res.status(404).json({ error: "정산 내역을 찾을 수 없습니다." });
     }
 
-    res.json({
-      settlement: convertBigIntToString(settlement),
-    });
+    // sellers를 seller로, SettlementPeriod를 settlementPeriod로, SettlementItem을 settlementItems로 매핑
+    const settlementResponse = {
+      ...settlement,
+      seller: settlement.sellers || null,
+      settlementPeriod: settlement.SettlementPeriod || null,
+      settlementItems: settlement.SettlementItem || [],
+    };
+    delete settlementResponse.sellers;
+    delete settlementResponse.SettlementPeriod;
+    delete settlementResponse.SettlementItem;
+
+    res.json(convertBigIntToString(settlementResponse));
   } catch (error) {
     console.error("정산 상세 조회 오류:", error);
     res.status(500).json({
@@ -624,7 +633,7 @@ exports.holdSettlements = async (req, res) => {
     const parsedIds = settlementIds.map((id) => parseBigIntId(id));
 
     // 보류할 정산들이 존재하는지 확인
-    const settlements = await prisma.settlement.findMany({
+    const settlements = await prisma.Settlement.findMany({
       where: {
         id: { in: parsedIds },
         status: { in: ["PENDING", "CALCULATING"] }, // 대기 또는 처리중 상태만 보류 가능
@@ -689,7 +698,7 @@ exports.unholdSettlements = async (req, res) => {
     const parsedIds = settlementIds.map((id) => parseBigIntId(id));
 
     // 보류 해제할 정산들이 존재하는지 확인
-    const settlements = await prisma.settlement.findMany({
+    const settlements = await prisma.Settlement.findMany({
       where: {
         id: { in: parsedIds },
         status: "ON_HOLD", // 보류 상태만 해제 가능
@@ -754,7 +763,7 @@ exports.deleteSettlements = async (req, res) => {
     const parsedIds = settlementIds.map((id) => parseBigIntId(id));
 
     // 삭제할 정산들이 존재하는지 확인
-    const settlements = await prisma.settlement.findMany({
+    const settlements = await prisma.Settlement.findMany({
       where: {
         id: { in: parsedIds },
         status: { in: ["PENDING", "ON_HOLD"] }, // 대기 또는 보류 상태만 삭제 가능
@@ -813,7 +822,7 @@ exports.cancelSettlements = async (req, res) => {
     const parsedIds = settlementIds.map((id) => parseBigIntId(id));
 
     // 취소할 정산들이 존재하는지 확인
-    const settlements = await prisma.settlement.findMany({
+    const settlements = await prisma.Settlement.findMany({
       where: {
         id: { in: parsedIds },
         status: "COMPLETED", // 완료 상태만 취소 가능
@@ -882,7 +891,7 @@ exports.updateSettlementStatus = async (req, res) => {
       updateData.settledAt = null;
     }
 
-    const settlement = await prisma.settlement.update({
+    const settlement = await prisma.Settlement.update({
       where: { id: parsedSettlementId },
       data: updateData,
       include: {
@@ -1033,7 +1042,7 @@ exports.getSellerProductSettlements = async (req, res) => {
     const parsedSellerId = parseBigIntId(sellerId);
 
     // 정산 아이템들을 상품별로 그룹핑하여 집계
-    const settlementItems = await prisma.settlementItem.findMany({
+    const settlementItems = await prisma.SettlementItem.findMany({
       where: {
         Settlement: {
           sellerId: parsedSellerId,

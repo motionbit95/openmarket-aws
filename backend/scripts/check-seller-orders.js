@@ -4,7 +4,7 @@ const prisma = new PrismaClient();
 async function checkOrders() {
   try {
     // seller1의 ID 찾기
-    const seller = await prisma.seller.findUnique({
+    const seller = await prisma.sellers.findUnique({
       where: { email: 'seller1@shop.com' }
     });
 

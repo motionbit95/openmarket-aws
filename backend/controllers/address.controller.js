@@ -13,7 +13,7 @@ exports.getAllAddresses = async (req, res) => {
         return res.status(400).json({ message: "유효하지 않은 userId입니다." });
       }
     }
-    const addresses = await prisma.userAddress.findMany({ where });
+    const addresses = await prisma.user_addresses.findMany({ where });
     if (!addresses || addresses.length === 0) {
       return res.status(200).json([]); // 목록이 없으면 빈 배열 반환
     }
@@ -33,7 +33,7 @@ exports.getAddressesByUserId = async (req, res) => {
     } catch (parseError) {
       return res.status(400).json({ message: "유효하지 않은 userId입니다." });
     }
-    const addresses = await prisma.userAddress.findMany({
+    const addresses = await prisma.user_addresses.findMany({
       where: { userId: userIdBigInt },
     });
     res.json(convertBigIntToString(addresses));
@@ -52,7 +52,7 @@ exports.getAddressById = async (req, res) => {
     } catch (parseError) {
       return res.status(400).json({ message: "유효하지 않은 주소 ID입니다." });
     }
-    const address = await prisma.userAddress.findUnique({
+    const address = await prisma.user_addresses.findUnique({
       where: { id: idBigInt },
     });
     if (!address) {
@@ -84,13 +84,13 @@ exports.createAddress = async (req, res) => {
 
     // isDefault가 true면 해당 유저의 기존 기본 배송지 해제
     if (isDefault) {
-      await prisma.userAddress.updateMany({
+      await prisma.user_addresses.updateMany({
         where: { userId: parseBigIntId(userId), isDefault: true },
         data: { isDefault: false },
       });
     }
 
-    const newAddress = await prisma.userAddress.create({
+    const newAddress = await prisma.user_addresses.create({
       data: {
         userId: parseBigIntId(userId),
         recipient,
@@ -117,7 +117,7 @@ exports.updateAddress = async (req, res) => {
       req.body;
 
     // isDefault가 true면 해당 유저의 기존 기본 배송지 해제
-    let address = await prisma.userAddress.findUnique({
+    let address = await prisma.user_addresses.findUnique({
       where: { id: idBigInt },
     });
     if (!address) {
@@ -125,13 +125,13 @@ exports.updateAddress = async (req, res) => {
     }
 
     if (isDefault) {
-      await prisma.userAddress.updateMany({
+      await prisma.user_addresses.updateMany({
         where: { userId: address.userId, isDefault: true },
         data: { isDefault: false },
       });
     }
 
-    const updatedAddress = await prisma.userAddress.update({
+    const updatedAddress = await prisma.user_addresses.update({
       where: { id: idBigInt },
       data: {
         recipient,
@@ -156,7 +156,7 @@ exports.deleteAddress = async (req, res) => {
     const idBigInt = parseBigIntId(id);
 
     // 기본배송지 여부 확인
-    const address = await prisma.userAddress.findUnique({
+    const address = await prisma.user_addresses.findUnique({
       where: { id: idBigInt },
     });
     if (!address) {
@@ -170,7 +170,7 @@ exports.deleteAddress = async (req, res) => {
         .json({ message: "기본배송지는 삭제할 수 없습니다." });
     }
 
-    await prisma.userAddress.delete({
+    await prisma.user_addresses.delete({
       where: { id: idBigInt },
     });
     res.json({ message: "배송지 삭제 완료" });

@@ -53,12 +53,17 @@ exports.getTermsById = async (req, res) => {
 exports.createTerms = async (req, res) => {
   const { type, title, content, effective_date } = req.body;
   try {
+    // id 생성: type + timestamp
+    const id = `${type.toUpperCase()}_${Date.now()}`;
+
     const newTerms = await prisma.terms.create({
       data: {
+        id,
         type: type.toUpperCase(),
         title,
         content,
         effective_date: new Date(effective_date),
+        updated_at: new Date(),
       },
     });
     res.status(201).json(newTerms);

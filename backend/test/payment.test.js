@@ -12,7 +12,7 @@ describe("결제 API 테스트", () => {
 
   beforeAll(async () => {
     // 테스트용 사용자 생성
-    testUser = await prisma.user.create({
+    testUser = await prisma.users.create({
       data: {
         user_name: "결제테스트유저",
         email: `payment_test_${Date.now()}@test.com`,
@@ -23,7 +23,7 @@ describe("결제 API 테스트", () => {
     });
 
     // 테스트용 판매자 생성
-    testSeller = await prisma.seller.create({
+    testSeller = await prisma.sellers.create({
       data: {
         name: "테스트판매자",
         email: `seller_payment_test_${Date.now()}@test.com`,
@@ -54,7 +54,7 @@ describe("결제 API 테스트", () => {
         stockQuantity: 50,
         description: "결제 테스트용 상품입니다.",
         isSingleProduct: true,
-        prices: {
+        ProductPrice: {
           create: {
             originalPrice: 15000,
             salePrice: 12000,
@@ -66,7 +66,7 @@ describe("결제 API 테스트", () => {
     });
 
     // 테스트용 배송지 생성
-    testAddress = await prisma.userAddress.create({
+    testAddress = await prisma.user_addresses.create({
       data: {
         userId: testUser.id,
         recipient: "김결제",
@@ -80,7 +80,7 @@ describe("결제 API 테스트", () => {
     });
 
     // 테스트용 주문 생성
-    testOrder = await prisma.order.create({
+    testOrder = await prisma.Order.create({
       data: {
         orderNumber: `TEST-ORDER-${Date.now()}`,
         userId: testUser.id,
@@ -97,7 +97,7 @@ describe("결제 API 테스트", () => {
         paymentMethod: "CARD",
         orderStatus: "PENDING",
         paymentStatus: "PENDING",
-        orderItems: {
+        OrderItem: {
           create: [
             {
               productId: testProduct.id,
@@ -114,19 +114,28 @@ describe("결제 API 테스트", () => {
   });
 
   afterAll(async () => {
-    // 테스트 데이터 정리
-    await prisma.orderItem.deleteMany({ where: { orderId: testOrder.id } });
-    await prisma.order.delete({ where: { id: testOrder.id } });
+    // 테스트 데이터 정리 - FK 제약 순서 고려
+    await prisma.OrderItem.deleteMany({ where: { orderId: testOrder.id } });
+    await prisma.Order.delete({ where: { id: testOrder.id } });
 
-    await prisma.userAddress.delete({ where: { id: testAddress.id } });
+    await prisma.user_addresses.delete({ where: { id: testAddress.id } });
 
-    await prisma.productPrice.deleteMany({
+    // 장바구니 관련 데이터 삭제 (user가 가질 수 있음)
+    const cart = await prisma.Cart.findFirst({ where: { userId: testUser.id } });
+    if (cart) {
+      await prisma.CartItem.deleteMany({ where: { cartId: cart.id } });
+      await prisma.Cart.delete({ where: { id: cart.id } });
+    }
+
+    await prisma.ProductPrice.deleteMany({
       where: { productId: testProduct.id },
     });
-    await prisma.product.delete({ where: { id: testProduct.id } });
+    await prisma.Product.delete({ where: { id: testProduct.id } });
 
-    await prisma.seller.delete({ where: { id: testSeller.id } });
-    await prisma.user.delete({ where: { id: testUser.id } });
+    await prisma.sellers.delete({ where: { id: testSeller.id } });
+    await prisma.users.delete({ where: { id: testUser.id } });
+
+    await prisma.$disconnect();
   });
 
   it("결제를 승인해야 한다", async () => {
@@ -169,7 +178,7 @@ describe("결제 API 테스트", () => {
 
   it("결제 실패를 처리해야 한다", async () => {
     // 새로운 테스트 주문 생성
-    const failOrder = await prisma.order.create({
+    const failOrder = await prisma.Order.create({
       data: {
         orderNumber: `FAIL-ORDER-${Date.now()}`,
         userId: testUser.id,
@@ -200,7 +209,7 @@ describe("결제 API 테스트", () => {
     expect(res.body.order.orderStatus).toBe("CANCELLED");
 
     // 테스트 주문 삭제
-    await prisma.order.delete({ where: { id: failOrder.id } });
+    await prisma.Order.delete({ where: { id: failOrder.id } });
   });
 
   it("환불을 처리해야 한다", async () => {
@@ -224,7 +233,7 @@ describe("결제 API 테스트", () => {
 
   it("결제 금액 불일치시 400을 반환해야 한다", async () => {
     // 새로운 테스트 주문 생성
-    const mismatchOrder = await prisma.order.create({
+    const mismatchOrder = await prisma.Order.create({
       data: {
         orderNumber: `MISMATCH-ORDER-${Date.now()}`,
         userId: testUser.id,
@@ -257,12 +266,12 @@ describe("결제 API 테스트", () => {
     expect(res.body.paidAmount).toBe(15000);
 
     // 테스트 주문 삭제
-    await prisma.order.delete({ where: { id: mismatchOrder.id } });
+    await prisma.Order.delete({ where: { id: mismatchOrder.id } });
   });
 
   it("이미 결제 완료된 주문에 대해 400을 반환해야 한다", async () => {
     // 이미 결제 완료된 주문 생성
-    const completedOrder = await prisma.order.create({
+    const completedOrder = await prisma.Order.create({
       data: {
         orderNumber: `COMPLETED-ORDER-${Date.now()}`,
         userId: testUser.id,
@@ -295,7 +304,7 @@ describe("결제 API 테스트", () => {
     expect(res.body.error).toBe("이미 결제가 완료된 주문입니다.");
 
     // 테스트 주문 삭제
-    await prisma.order.delete({ where: { id: completedOrder.id } });
+    await prisma.Order.delete({ where: { id: completedOrder.id } });
   });
 
   it("존재하지 않는 주문에 대해 404를 반환해야 한다", async () => {
@@ -307,7 +316,7 @@ describe("결제 API 테스트", () => {
 
   it("PG사 웹훅을 처리해야 한다", async () => {
     // 새로운 테스트 주문 생성
-    const webhookOrder = await prisma.order.create({
+    const webhookOrder = await prisma.Order.create({
       data: {
         orderNumber: `WEBHOOK-ORDER-${Date.now()}`,
         userId: testUser.id,
@@ -342,7 +351,7 @@ describe("결제 API 테스트", () => {
     expect(res.statusCode).toBe(200);
 
     // 테스트 주문 삭제
-    await prisma.order.delete({ where: { id: webhookOrder.id } });
+    await prisma.Order.delete({ where: { id: webhookOrder.id } });
   });
 });
 
@@ -355,7 +364,7 @@ describe("KG이니시스 결제 API 테스트", () => {
     inicisPayment = new InicisPayment();
     
     // 테스트용 사용자 생성
-    testUser = await prisma.user.create({
+    testUser = await prisma.users.create({
       data: {
         user_name: '이니시스테스트유저',
         email: `inicis_test_${Date.now()}@test.com`,
@@ -365,7 +374,7 @@ describe("KG이니시스 결제 API 테스트", () => {
     });
 
     // 테스트용 주문 생성
-    testOrder = await prisma.order.create({
+    testOrder = await prisma.Order.create({
       data: {
         orderNumber: `INICIS-${Date.now()}`,
         userId: testUser.id,
@@ -385,10 +394,10 @@ describe("KG이니시스 결제 API 테스트", () => {
 
   afterAll(async () => {
     // 테스트 데이터 정리
-    await prisma.order.deleteMany({
+    await prisma.Order.deleteMany({
       where: { userId: testUser.id }
     });
-    await prisma.user.delete({
+    await prisma.users.delete({
       where: { id: testUser.id }
     });
   });
@@ -462,7 +471,7 @@ describe("KG이니시스 결제 API 테스트", () => {
   describe("POST /payment/inicis/callback", () => {
     beforeEach(async () => {
       // 각 테스트 전 주문 상태 초기화
-      await prisma.order.update({
+      await prisma.Order.update({
         where: { id: testOrder.id },
         data: {
           paymentStatus: 'PENDING',
@@ -504,7 +513,7 @@ describe("KG이니시스 결제 API 테스트", () => {
       expect(response.body.payment.card.cardType).toBe('신용카드');
 
       // 주문 상태 확인
-      const updatedOrder = await prisma.order.findUnique({
+      const updatedOrder = await prisma.Order.findUnique({
         where: { id: testOrder.id }
       });
       expect(updatedOrder.paymentStatus).toBe('COMPLETED');
@@ -565,7 +574,7 @@ describe("KG이니시스 결제 API 테스트", () => {
       expect(response.body.error).toContain('카드승인 실패');
 
       // 주문 상태 확인
-      const updatedOrder = await prisma.order.findUnique({
+      const updatedOrder = await prisma.Order.findUnique({
         where: { id: testOrder.id }
       });
       expect(updatedOrder.paymentStatus).toBe('FAILED');

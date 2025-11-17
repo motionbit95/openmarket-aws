@@ -14,21 +14,21 @@ exports.getCartByUser = async (req, res) => {
   }
   try {
     // 유저의 장바구니 및 아이템 조회
-    const cart = await prisma.cart.findFirst({
+    const cart = await prisma.Cart.findFirst({
       where: { userId },
       include: {
-        items: {
+        CartItem: {
           include: {
-            product: {
+            Product: {
               include: {
-                prices: true,
-                images: {
+                ProductPrice: true,
+                ProductImage: {
                   where: { isMain: true },
                   take: 1,
                 },
               },
             },
-            sku: true,
+            ProductSKU: true,
           },
         },
       },
@@ -36,8 +36,13 @@ exports.getCartByUser = async (req, res) => {
     if (!cart) {
       return res.status(200).json({ cart: null, items: [] });
     }
-    // BigInt → string 변환 후 응답
-    res.json(convertBigIntToString(cart));
+    // BigInt → string 변환 후 응답 (CartItem을 items로 매핑)
+    const response = {
+      ...cart,
+      items: cart.CartItem || [],
+    };
+    delete response.CartItem;
+    res.json(convertBigIntToString(response));
   } catch (err) {
     res.status(500).json({ error: "장바구니 조회 실패", details: err.message });
   }
@@ -85,9 +90,9 @@ exports.addToCart = async (req, res) => {
     console.log("[addToCart] userId 파싱 결과:", parsedUserId);
 
     // 1. prisma 인스턴스가 제대로 import/require 되었는지 확인
-    if (typeof prisma === "undefined" || !prisma.cart) {
+    if (typeof prisma === "undefined" || !prisma.Cart) {
       console.error(
-        "[addToCart] prisma 또는 prisma.cart가 정의되어 있지 않습니다."
+        "[addToCart] prisma 또는 prisma.Cart가 정의되어 있지 않습니다."
       );
       return res.status(500).json({
         error: "서버 내부 오류",
@@ -98,7 +103,7 @@ exports.addToCart = async (req, res) => {
     // 2. 유저의 장바구니가 없으면 생성
     let cart;
     try {
-      cart = await prisma.cart.findFirst({
+      cart = await prisma.Cart.findFirst({
         where: { userId: parsedUserId },
       });
       console.log("[addToCart] cart 조회 결과:", cart);
@@ -111,7 +116,7 @@ exports.addToCart = async (req, res) => {
     }
 
     if (!cart) {
-      cart = await prisma.cart.create({
+      cart = await prisma.Cart.create({
         data: { userId: parsedUserId },
       });
       console.log("[addToCart] cart 새로 생성:", cart);
@@ -155,7 +160,7 @@ exports.addToCart = async (req, res) => {
         }
 
         // 동일 상품/옵션/selectedOptionValue가 이미 있으면 수량만 증가
-        let item = await prisma.cartItem.findFirst({
+        let item = await prisma.CartItem.findFirst({
           where: {
             cartId: cart.id,
             productId: BigInt(productId),
@@ -165,7 +170,7 @@ exports.addToCart = async (req, res) => {
         });
 
         if (item) {
-          const updated = await prisma.cartItem.update({
+          const updated = await prisma.CartItem.update({
             where: { id: item.id },
             data: {
               quantity: item.quantity + selQuantity,
@@ -185,7 +190,7 @@ exports.addToCart = async (req, res) => {
             },
           });
         } else {
-          const newItem = await prisma.cartItem.create({
+          const newItem = await prisma.CartItem.create({
             data: {
               cartId: cart.id,
               productId: BigInt(productId),
@@ -226,7 +231,7 @@ exports.addToCart = async (req, res) => {
         selectedOptionValue = req.body.value;
       }
 
-      let item = await prisma.cartItem.findFirst({
+      let item = await prisma.CartItem.findFirst({
         where: {
           cartId: cart.id,
           productId: BigInt(productId),
@@ -234,7 +239,7 @@ exports.addToCart = async (req, res) => {
         },
       });
       if (item) {
-        const updated = await prisma.cartItem.update({
+        const updated = await prisma.CartItem.update({
           where: { id: item.id },
           data: {
             quantity: item.quantity + Number(quantity),
@@ -253,7 +258,7 @@ exports.addToCart = async (req, res) => {
           },
         });
       } else {
-        const newItem = await prisma.cartItem.create({
+        const newItem = await prisma.CartItem.create({
           data: {
             cartId: cart.id,
             productId: BigInt(productId),
@@ -301,7 +306,7 @@ exports.updateCartItemQuantity = async (req, res) => {
   const itemId = BigInt(req.params.itemId);
   const { quantity } = req.body;
   try {
-    const updated = await prisma.cartItem.update({
+    const updated = await prisma.CartItem.update({
       where: { id: itemId },
       data: { quantity: Number(quantity) },
     });
@@ -318,7 +323,7 @@ exports.updateCartItemQuantity = async (req, res) => {
 exports.removeCartItem = async (req, res) => {
   const itemId = BigInt(req.params.itemId);
   try {
-    await prisma.cartItem.delete({ where: { id: itemId } });
+    await prisma.CartItem.delete({ where: { id: itemId } });
     res.json({ message: "장바구니 아이템 삭제됨" });
   } catch (err) {
     res.status(500).json({ error: "삭제 실패", details: err.message });
@@ -332,11 +337,11 @@ exports.removeCartItem = async (req, res) => {
 exports.clearCart = async (req, res) => {
   const userId = BigInt(req.params.userId);
   try {
-    const cart = await prisma.cart.findFirst({ where: { userId } });
+    const cart = await prisma.Cart.findFirst({ where: { userId } });
     if (!cart) {
       return res.json({ message: "장바구니 없음" });
     }
-    await prisma.cartItem.deleteMany({ where: { cartId: cart.id } });
+    await prisma.CartItem.deleteMany({ where: { cartId: cart.id } });
     res.json({ message: "장바구니 비움" });
   } catch (err) {
     res

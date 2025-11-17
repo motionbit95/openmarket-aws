@@ -20,24 +20,30 @@ exports.createReview = async (req, res) => {
       return res.status(400).json({ message: "rating은 숫자여야 합니다." });
     }
 
-    const review = await prisma.review.create({
+    const review = await prisma.Review.create({
       data: {
         productId,
         userId: userIdBigInt,
         rating: ratingInt,
         content,
-        images: images?.length
+        ReviewImage: images?.length
           ? {
               create: images,
             }
           : undefined,
       },
-      include: { images: true },
+      include: { ReviewImage: true },
     });
 
     console.log(review);
 
-    res.status(201).json(convertBigIntToString(review));
+    // Transform response to match test expectations
+    const response = {
+      ...review,
+      images: review.ReviewImage || [],
+    };
+
+    res.status(201).json(convertBigIntToString(response));
   } catch (error) {
     console.error("createReview error:", error);
     res.status(500).json({ message: "리뷰 등록 오류" });
@@ -49,16 +55,22 @@ exports.getReviewsByProduct = async (req, res) => {
   try {
     const { productId } = req.params;
 
-    const reviews = await prisma.review.findMany({
+    const reviews = await prisma.Review.findMany({
       where: { productId },
       include: {
-        user: { select: { id: true, user_name: true } },
-        images: true,
+        users: { select: { id: true, user_name: true } },
+        ReviewImage: true,
       },
       orderBy: { createdAt: "desc" },
     });
 
-    res.json(convertBigIntToString(reviews));
+    // Transform response to match test expectations
+    const transformedReviews = reviews.map(review => ({
+      ...review,
+      images: review.ReviewImage || [],
+    }));
+
+    res.json(convertBigIntToString(transformedReviews));
   } catch (error) {
     console.error("getReviewsByProduct error:", error);
     res.status(500).json({ message: "리뷰 목록 조회 오류" });
@@ -70,9 +82,9 @@ exports.getReviewById = async (req, res) => {
   try {
     const { id } = req.params;
 
-    const review = await prisma.review.findUnique({
+    const review = await prisma.Review.findUnique({
       where: { id },
-      include: { images: true, user: true },
+      include: { ReviewImage: true, users: true },
     });
 
     if (!review) {
@@ -94,20 +106,26 @@ exports.updateReview = async (req, res) => {
 
     // 이미지가 있으면 기존 삭제 후 새로 생성, 없으면 그냥 수정만
     if (images && images.length) {
-      await prisma.reviewImage.deleteMany({ where: { reviewId: id } });
+      await prisma.ReviewImage.deleteMany({ where: { reviewId: id } });
     }
 
-    const review = await prisma.review.update({
+    const review = await prisma.Review.update({
       where: { id },
       data: {
         rating,
         content,
-        images: images && images.length ? { create: images } : undefined,
+        ReviewImage: images && images.length ? { create: images } : undefined,
       },
-      include: { images: true },
+      include: { ReviewImage: true },
     });
 
-    res.json(convertBigIntToString(review));
+    // Transform response to match test expectations
+    const response = {
+      ...review,
+      images: review.ReviewImage || [],
+    };
+
+    res.json(convertBigIntToString(response));
   } catch (error) {
     console.error("updateReview error:", error);
     res.status(500).json({ message: "리뷰 수정 오류" });
@@ -120,8 +138,8 @@ exports.deleteReview = async (req, res) => {
     const { id } = req.params;
 
     await prisma.$transaction([
-      prisma.reviewImage.deleteMany({ where: { reviewId: id } }),
-      prisma.review.delete({ where: { id } }),
+      prisma.ReviewImage.deleteMany({ where: { reviewId: id } }),
+      prisma.Review.delete({ where: { id } }),
     ]);
 
     res.json({ message: "리뷰가 성공적으로 삭제되었습니다" });
@@ -136,7 +154,7 @@ exports.getAllReviewsBySeller = async (req, res) => {
     const { sellerId } = req.params;
     const sellerIdBigInt = parseBigIntId(sellerId);
 
-    const reviews = await prisma.review.findMany({
+    const reviews = await prisma.Review.findMany({
       where: {
         Product: {
           sellerId: sellerIdBigInt,

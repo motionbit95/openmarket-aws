@@ -252,26 +252,26 @@ exports.createProductV2 = async (req, res) => {
     const fullProduct = await prisma.product.findUnique({
       where: { id: result.id },
       include: {
-        prices: true,
-        delivery: true,
-        returns: true,
-        images: true,
-        infoNotices: true,
-        optionGroups: {
+        ProductPrice: true,
+        ProductDelivery: true,
+        ProductReturn: true,
+        ProductImage: true,
+        ProductInfoNotice: true,
+        ProductOptionGroup: {
           include: {
-            options: {
+            ProductOptionValue: {
               orderBy: { sortOrder: "asc" },
             },
           },
           orderBy: { sortOrder: "asc" },
         },
-        skus: {
+        ProductSKU: {
           include: {
-            skuOptions: {
+            ProductSKUOption: {
               include: {
-                optionValue: {
+                ProductOptionValue: {
                   include: {
-                    optionGroup: true,
+                    ProductOptionGroup: true,
                   },
                 },
               },
@@ -282,9 +282,25 @@ exports.createProductV2 = async (req, res) => {
       },
     });
 
+    // ProductSKU를 skus로, ProductOptionGroup을 optionGroups로 매핑
+    const productResponse = {
+      ...fullProduct,
+      skus: fullProduct.ProductSKU || [],
+      optionGroups: (fullProduct.ProductOptionGroup || []).map(group => ({
+        ...group,
+        options: group.ProductOptionValue || [],
+      })),
+    };
+    delete productResponse.ProductSKU;
+    delete productResponse.ProductOptionGroup;
+    // optionGroups 내부의 ProductOptionValue 제거
+    if (productResponse.optionGroups) {
+      productResponse.optionGroups.forEach(group => delete group.ProductOptionValue);
+    }
+
     res.status(201).json({
       message: "상품이 생성되었습니다.",
-      product: convertBigIntToString(fullProduct),
+      product: convertBigIntToString(productResponse),
     });
   } catch (error) {
     console.error("상품 생성 오류:", error);
@@ -307,30 +323,30 @@ exports.getProductByIdV2 = async (req, res) => {
     const product = await prisma.product.findUnique({
       where: { id: parsedProductId },
       include: {
-        prices: true,
-        delivery: true,
-        returns: true,
-        images: {
+        ProductPrice: true,
+        ProductDelivery: true,
+        ProductReturn: true,
+        ProductImage: {
           orderBy: { sortOrder: "asc" },
         },
-        infoNotices: true,
-        optionGroups: {
+        ProductInfoNotice: true,
+        ProductOptionGroup: {
           include: {
-            options: {
+            ProductOptionValue: {
               where: { isAvailable: true },
               orderBy: { sortOrder: "asc" },
             },
           },
           orderBy: { sortOrder: "asc" },
         },
-        skus: {
+        ProductSKU: {
           where: { isActive: true },
           include: {
-            skuOptions: {
+            ProductSKUOption: {
               include: {
-                optionValue: {
+                ProductOptionValue: {
                   include: {
-                    optionGroup: true,
+                    ProductOptionGroup: true,
                   },
                 },
               },
@@ -341,14 +357,13 @@ exports.getProductByIdV2 = async (req, res) => {
             { createdAt: "asc" },
           ],
         },
-        reviews: {
+        Review: {
           take: 5,
           orderBy: { createdAt: "desc" },
           include: {
-            user: {
+            users: {
               select: { id: true, user_name: true },
             },
-            images: true,
           },
         },
       },
@@ -358,7 +373,30 @@ exports.getProductByIdV2 = async (req, res) => {
       return res.status(404).json({ error: "상품을 찾을 수 없습니다." });
     }
 
-    res.json(convertBigIntToString(product));
+    // ProductSKU를 skus로, ProductOptionGroup을 optionGroups로 매핑
+    const productResponse = {
+      ...product,
+      skus: (product.ProductSKU || []).map(sku => ({
+        ...sku,
+        skuOptions: sku.ProductSKUOption || [],
+      })),
+      optionGroups: (product.ProductOptionGroup || []).map(group => ({
+        ...group,
+        options: group.ProductOptionValue || [],
+      })),
+    };
+    delete productResponse.ProductSKU;
+    delete productResponse.ProductOptionGroup;
+    // skus 내부의 ProductSKUOption 제거
+    if (productResponse.skus) {
+      productResponse.skus.forEach(sku => delete sku.ProductSKUOption);
+    }
+    // optionGroups 내부의 ProductOptionValue 제거
+    if (productResponse.optionGroups) {
+      productResponse.optionGroups.forEach(group => delete group.ProductOptionValue);
+    }
+
+    res.json(convertBigIntToString(productResponse));
   } catch (error) {
     console.error("상품 조회 오류:", error);
     res.status(500).json({
@@ -448,20 +486,20 @@ exports.getProductsV2 = async (req, res) => {
       prisma.product.findMany({
         where,
         include: {
-          prices: true,
-          images: {
+          ProductPrice: true,
+          ProductImage: {
             where: { isMain: true },
             take: 1,
           },
-          skus: {
+          ProductSKU: {
             where: { isActive: true },
             take: 1,
             orderBy: { isMain: "desc" },
           },
           _count: {
             select: {
-              reviews: true,
-              likedByUsers: true,
+              Review: true,
+              UserLikeProduct: true,
             },
           },
         },
@@ -472,12 +510,20 @@ exports.getProductsV2 = async (req, res) => {
       prisma.product.count({ where }),
     ]);
 
+    // ProductSKU를 skus로 매핑
+    const mappedProducts = products.map(product => ({
+      ...product,
+      skus: product.ProductSKU || [],
+    }));
+    // ProductSKU 제거
+    mappedProducts.forEach(product => delete product.ProductSKU);
+
     // 가격 필터링 (Prisma에서 직접 지원하지 않는 복잡한 가격 조건)
-    let filteredProducts = products;
+    let filteredProducts = mappedProducts;
     if (minPrice || maxPrice) {
-      filteredProducts = products.filter((product) => {
+      filteredProducts = mappedProducts.filter((product) => {
         const price =
-          product.prices?.salePrice || product.skus[0]?.salePrice || 0;
+          product.ProductPrice?.[0]?.salePrice || product.skus?.[0]?.salePrice || 0;
         const min = minPrice ? parseFloat(minPrice) : 0;
         const max = maxPrice ? parseFloat(maxPrice) : Infinity;
         return price >= min && price <= max;
@@ -487,14 +533,14 @@ exports.getProductsV2 = async (req, res) => {
     // 가격 정렬 (JavaScript로 처리)
     if (sortBy === "price_low") {
       filteredProducts.sort((a, b) => {
-        const priceA = a.prices?.salePrice || a.skus[0]?.salePrice || 0;
-        const priceB = b.prices?.salePrice || b.skus[0]?.salePrice || 0;
+        const priceA = a.ProductPrice?.[0]?.salePrice || a.skus?.[0]?.salePrice || 0;
+        const priceB = b.ProductPrice?.[0]?.salePrice || b.skus?.[0]?.salePrice || 0;
         return priceA - priceB;
       });
     } else if (sortBy === "price_high") {
       filteredProducts.sort((a, b) => {
-        const priceA = a.prices?.salePrice || a.skus[0]?.salePrice || 0;
-        const priceB = b.prices?.salePrice || b.skus[0]?.salePrice || 0;
+        const priceA = a.ProductPrice?.[0]?.salePrice || a.skus?.[0]?.salePrice || 0;
+        const priceB = b.ProductPrice?.[0]?.salePrice || b.skus?.[0]?.salePrice || 0;
         return priceB - priceA;
       });
     }
@@ -533,7 +579,7 @@ exports.getProductStock = async (req, res) => {
         displayName: true,
         isSingleProduct: true,
         stockQuantity: true,
-        skus: {
+        ProductSKU: {
           where: { isActive: true },
           select: {
             id: true,
@@ -543,11 +589,11 @@ exports.getProductStock = async (req, res) => {
             reservedStock: true,
             alertStock: true,
             salePrice: true,
-            skuOptions: {
+            ProductSKUOption: {
               include: {
-                optionValue: {
+                ProductOptionValue: {
                   include: {
-                    optionGroup: true,
+                    ProductOptionGroup: true,
                   },
                 },
               },
@@ -561,7 +607,21 @@ exports.getProductStock = async (req, res) => {
       return res.status(404).json({ error: "상품을 찾을 수 없습니다." });
     }
 
-    res.json(convertBigIntToString(product));
+    // ProductSKU를 skus로 매핑
+    const stockResponse = {
+      ...product,
+      skus: (product.ProductSKU || []).map(sku => ({
+        ...sku,
+        skuOptions: sku.ProductSKUOption || [],
+      })),
+    };
+    delete stockResponse.ProductSKU;
+    // skus 내부의 ProductSKUOption 제거
+    if (stockResponse.skus) {
+      stockResponse.skus.forEach(sku => delete sku.ProductSKUOption);
+    }
+
+    res.json(convertBigIntToString(stockResponse));
   } catch (error) {
     console.error("재고 조회 오류:", error);
     res.status(500).json({

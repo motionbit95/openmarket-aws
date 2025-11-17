@@ -19,7 +19,7 @@ describe("첨부파일 API 테스트", () => {
   // S3 mocking을 위한 환경변수 설정 (테스트 환경에서만)
   beforeAll(async () => {
     // 테스트용 Notice 생성 (Attachment의 target_id로 사용)
-    const notice = await prisma.notice.create({
+    const notice = await prisma.Notice.create({
       data: {
         type: "USER",
         title: "첨부파일 테스트용 공지",
@@ -32,12 +32,12 @@ describe("첨부파일 API 테스트", () => {
   afterAll(async () => {
     // 첨부파일 및 테스트용 Notice 정리
     if (uploadedAttachmentIds.length > 0) {
-      await prisma.attachment.deleteMany({
+      await prisma.attachments.deleteMany({
         where: { id: { in: uploadedAttachmentIds } },
       });
     }
     if (createdNoticeId) {
-      await prisma.notice.deleteMany({ where: { id: createdNoticeId } });
+      await prisma.Notice.deleteMany({ where: { id: createdNoticeId } });
     }
     await prisma.$disconnect();
   });
@@ -67,7 +67,7 @@ describe("첨부파일 API 테스트", () => {
       }
 
       // DB에 실제로 저장되었는지 확인
-      const dbFiles = await prisma.attachment.findMany({
+      const dbFiles = await prisma.attachments.findMany({
         where: {
           target_type: "notice",
           target_id: BigInt(createdNoticeId),
@@ -141,7 +141,7 @@ describe("첨부파일 API 테스트", () => {
       );
 
       // DB에서 실제로 삭제되었는지 확인
-      const remain = await prisma.attachment.findMany({
+      const remain = await prisma.attachments.findMany({
         where: { id: { in: uploadedAttachmentIds } },
       });
       expect(remain.length).toBe(0);
@@ -180,7 +180,7 @@ describe("첨부파일 API 테스트", () => {
       expect(res.body.files[0].url).toMatch(/temp/);
 
       // DB에는 저장되지 않음
-      const dbFiles = await prisma.attachment.findMany({
+      const dbFiles = await prisma.attachments.findMany({
         where: { filename: "temp1.txt" },
       });
       expect(dbFiles.length).toBe(0);
@@ -216,7 +216,7 @@ describe("첨부파일 API 테스트", () => {
       expect(res.body.files[0].url).toMatch(/editor/);
 
       // DB에는 저장되지 않음
-      const dbFiles = await prisma.attachment.findMany({
+      const dbFiles = await prisma.attachments.findMany({
         where: { filename: "editor1.txt" },
       });
       expect(dbFiles.length).toBe(0);

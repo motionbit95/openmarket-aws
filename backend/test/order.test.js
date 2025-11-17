@@ -15,7 +15,7 @@ describe("주문 API 테스트", () => {
 
   beforeAll(async () => {
     // 테스트용 사용자 생성
-    testUser = await prisma.user.create({
+    testUser = await prisma.users.create({
       data: {
         user_name: "주문테스트유저",
         email: `order_test_${Date.now()}@test.com`,
@@ -26,7 +26,7 @@ describe("주문 API 테스트", () => {
     });
 
     // 테스트용 판매자 생성
-    testSeller = await prisma.seller.create({
+    testSeller = await prisma.sellers.create({
       data: {
         name: "테스트판매자",
         email: `seller_order_test_${Date.now()}@test.com`,
@@ -57,7 +57,7 @@ describe("주문 API 테스트", () => {
         stockQuantity: 100,
         description: "테스트용 상품입니다.",
         isSingleProduct: true,
-        prices: {
+        ProductPrice: {
           create: {
             originalPrice: 20000,
             salePrice: 18000,
@@ -69,7 +69,7 @@ describe("주문 API 테스트", () => {
     });
 
     // 테스트용 배송지 생성
-    testAddress = await prisma.userAddress.create({
+    testAddress = await prisma.user_addresses.create({
       data: {
         userId: testUser.id,
         recipient: "홍길동",
@@ -83,7 +83,7 @@ describe("주문 API 테스트", () => {
     });
 
     // 테스트용 쿠폰 생성
-    testCoupon = await prisma.coupon.create({
+    testCoupon = await prisma.Coupon.create({
       data: {
         title: "테스트 할인 쿠폰",
         content: "테스트용 쿠폰입니다",
@@ -104,7 +104,7 @@ describe("주문 API 테스트", () => {
     });
 
     // 테스트용 사용자 쿠폰 생성
-    testUserCoupon = await prisma.userCoupon.create({
+    testUserCoupon = await prisma.UserCoupon.create({
       data: {
         userId: testUser.id,
         couponId: testCoupon.id,
@@ -115,14 +115,14 @@ describe("주문 API 테스트", () => {
     });
 
     // 테스트용 장바구니 생성
-    testCart = await prisma.cart.create({
+    testCart = await prisma.Cart.create({
       data: {
         userId: testUser.id,
       },
     });
 
     // 테스트용 장바구니 아이템 생성
-    testCartItem = await prisma.cartItem.create({
+    testCartItem = await prisma.CartItem.create({
       data: {
         cartId: testCart.id,
         productId: testProduct.id,
@@ -136,25 +136,25 @@ describe("주문 API 테스트", () => {
   afterAll(async () => {
     // 테스트 데이터 정리
     if (testOrder) {
-      await prisma.orderItem.deleteMany({ where: { orderId: testOrder.id } });
-      await prisma.order.delete({ where: { id: testOrder.id } });
+      await prisma.OrderItem.deleteMany({ where: { orderId: testOrder.id } });
+      await prisma.Order.delete({ where: { id: testOrder.id } });
     }
 
-    await prisma.cartItem.deleteMany({ where: { cartId: testCart.id } });
-    await prisma.cart.delete({ where: { id: testCart.id } });
+    await prisma.CartItem.deleteMany({ where: { cartId: testCart.id } });
+    await prisma.Cart.delete({ where: { id: testCart.id } });
 
-    await prisma.userCoupon.deleteMany({ where: { userId: testUser.id } });
-    await prisma.coupon.delete({ where: { id: testCoupon.id } });
+    await prisma.UserCoupon.deleteMany({ where: { userId: testUser.id } });
+    await prisma.Coupon.delete({ where: { id: testCoupon.id } });
 
-    await prisma.userAddress.delete({ where: { id: testAddress.id } });
+    await prisma.user_addresses.delete({ where: { id: testAddress.id } });
 
     await prisma.productPrice.deleteMany({
       where: { productId: testProduct.id },
     });
     await prisma.product.delete({ where: { id: testProduct.id } });
 
-    await prisma.seller.delete({ where: { id: testSeller.id } });
-    await prisma.user.delete({ where: { id: testUser.id } });
+    await prisma.sellers.delete({ where: { id: testSeller.id } });
+    await prisma.users.delete({ where: { id: testUser.id } });
   });
 
   it("장바구니에서 주문을 생성해야 한다", async () => {
@@ -234,7 +234,7 @@ describe("주문 API 테스트", () => {
 
   it("빈 장바구니로 주문 생성시 400을 반환해야 한다", async () => {
     // 장바구니 아이템 삭제
-    await prisma.cartItem.deleteMany({ where: { cartId: testCart.id } });
+    await prisma.CartItem.deleteMany({ where: { cartId: testCart.id } });
 
     const res = await request(app).post("/orders/create-from-cart").send({
       userId: testUser.id.toString(),
@@ -248,7 +248,7 @@ describe("주문 API 테스트", () => {
 
   it("유효하지 않은 배송지로 주문 생성시 404를 반환해야 한다", async () => {
     // 장바구니 아이템 다시 생성
-    await prisma.cartItem.create({
+    await prisma.CartItem.create({
       data: {
         cartId: testCart.id,
         productId: testProduct.id,

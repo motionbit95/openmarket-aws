@@ -412,7 +412,7 @@ const sendSystemNotice = async (req, res) => {
     let userIds = targetUserIds;
     if (userIds.length === 0) {
       // 전체 사용자에게 발송
-      const allUsers = await prisma.user.findMany({
+      const allUsers = await prisma.users.findMany({
         select: { id: true }
       });
       userIds = allUsers.map(user => user.id.toString());

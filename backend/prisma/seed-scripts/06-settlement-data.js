@@ -125,8 +125,8 @@ async function createSettlementData() {
       console.log("완료된 주문이 없어서 샘플 주문을 생성합니다...");
 
       // 사용자와 판매자 정보 가져오기
-      const users = await prisma.user.findMany({ take: 3 });
-      const sellers = await prisma.seller.findMany({ take: 3 });
+      const users = await prisma.users.findMany({ take: 3 });
+      const sellers = await prisma.sellers.findMany({ take: 3 });
       const products = await prisma.product.findMany({
         include: { prices: true },
         take: 10,

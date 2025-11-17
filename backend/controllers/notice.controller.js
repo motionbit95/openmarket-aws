@@ -130,19 +130,40 @@ exports.getNoticeById = async (req, res) => {
     console.log("받은 ID:", req.params.id, "타입:", typeof req.params.id);
     const id = parseBigIntId(req.params.id);
 
-    // 조회수 증가
-    await prisma.Notice.update({
+    // 먼저 공지사항 존재 여부 확인 및 조회수 증가
+    const notice = await prisma.Notice.findUnique({
       where: { id },
-      data: {
-        view_count: {
-          increment: 1,
-        },
-      },
     });
 
-    const noticeWithAttachments = await getNoticeWithAttachments(id);
-    if (!noticeWithAttachments)
+    if (!notice) {
       return res.status(404).json({ message: "공지 없음" });
+    }
+
+    // 조회수 증가 (에러 발생 시 404 반환)
+    try {
+      await prisma.Notice.update({
+        where: { id },
+        data: {
+          view_count: {
+            increment: 1,
+          },
+        },
+      });
+    } catch (updateError) {
+      // 업데이트 중 레코드가 삭제된 경우
+      if (updateError.code === 'P2025') {
+        return res.status(404).json({ message: "공지 없음" });
+      }
+      throw updateError;
+    }
+
+    const noticeWithAttachments = await getNoticeWithAttachments(id);
+
+    // getNoticeWithAttachments가 null 반환 시 404
+    if (!noticeWithAttachments) {
+      return res.status(404).json({ message: "공지 없음" });
+    }
+
     res.json(convertBigIntToString(noticeWithAttachments));
   } catch (error) {
     console.error("공지 조회 실패:", error);

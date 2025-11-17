@@ -42,7 +42,7 @@ class InicisPayment {
       P_GOODS: goodsName.substring(0, 40),
       P_UNAME: buyerName,
       P_NEXT_URL: returnUrl,
-      P_RESERVED: "centerCd=Y&app_scheme=openmarket://"
+      P_RESERVED: "centerCd=Y"
     };
 
     // 추가 구매자 정보
@@ -162,13 +162,17 @@ class InicisPayment {
    * @returns {boolean} 유효성 여부
    */
   validateReqUrl(reqUrl, idcName) {
+    if (!reqUrl) {
+      return false;
+    }
+
     const expectedUrls = {
       'fc': 'https://mobile.inicis.com/smart/payment/',
       'ks': 'https://mobile.inicis.com/smart/payment/',
       'stg': 'https://stgmobile.inicis.com/smart/payment/'
     };
-    
-    return reqUrl && reqUrl.startsWith(expectedUrls[idcName]);
+
+    return reqUrl.startsWith(expectedUrls[idcName]);
   }
 
   /**

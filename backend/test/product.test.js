@@ -10,7 +10,7 @@ describe("상품 API 테스트", () => {
 
   beforeAll(async () => {
     // 테스트용 판매자 생성
-    const seller = await prisma.seller.create({
+    const seller = await prisma.sellers.create({
       data: {
         name: "테스트셀러",
         email: `test-seller-${Date.now()}@example.com`,
@@ -56,7 +56,7 @@ describe("상품 API 테스트", () => {
       }
     }
     // 테스트용 판매자 삭제
-    await prisma.seller.deleteMany({ where: { id: sellerId } });
+    await prisma.sellers.deleteMany({ where: { id: sellerId } });
     await prisma.$disconnect();
   });
 
@@ -77,13 +77,13 @@ describe("상품 API 테스트", () => {
       saleStartDate: "2025-07-11T00:00:00Z",
       saleEndDate: null,
       description: "이것은 테스트 상품입니다.",
-      prices: {
+      ProductPrice: {
         originalPrice: 30000,
         salePrice: 25000,
         discountRate: 16.7,
         flexzonePrice: 20000,
       },
-      delivery: {
+      ProductDelivery: {
         originAddress: "서울시 강남구",
         deliveryMethod: "택배",
         isBundle: true,
@@ -93,7 +93,7 @@ describe("상품 API 테스트", () => {
         deliveryFee: 0,
         deliveryTime: "2~3일",
       },
-      returns: {
+      ProductReturn: {
         returnAddress: "서울시 강남구 반품센터",
         initialShippingFee: 0,
         returnShippingFee: 2500,
@@ -225,13 +225,13 @@ describe("상품 API 테스트", () => {
       saleEndDate: null,
       description: "수정된 상품 설명",
       isSingleProduct: false,
-      prices: {
+      ProductPrice: {
         originalPrice: 40000,
         salePrice: 35000,
         discountRate: 12.5,
         flexzonePrice: 30000,
       },
-      delivery: {
+      ProductDelivery: {
         originAddress: "서울시 송파구",
         deliveryMethod: "퀵서비스",
         isBundle: false,
@@ -241,7 +241,7 @@ describe("상품 API 테스트", () => {
         deliveryFee: 3000,
         deliveryTime: "1~2일",
       },
-      returns: {
+      ProductReturn: {
         returnAddress: "서울시 송파구 반품센터",
         initialShippingFee: 3000,
         returnShippingFee: 3500,

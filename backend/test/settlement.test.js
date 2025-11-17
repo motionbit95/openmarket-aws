@@ -11,7 +11,7 @@ describe("정산 API 테스트", () => {
 
   beforeAll(async () => {
     // 테스트용 판매자 ID 조회
-    const seller = await prisma.seller.findFirst();
+    const seller = await prisma.sellers.findFirst();
     testSellerId = seller?.id?.toString();
   });
 
@@ -22,7 +22,7 @@ describe("정산 API 테스트", () => {
         // 1. 먼저 settlementItems 삭제
         await prisma.settlementItem.deleteMany({
           where: {
-            settlement: {
+            Settlement: {
               settlementPeriodId: BigInt(testPeriodId),
             },
           },
@@ -452,7 +452,7 @@ describe("정산 API 테스트", () => {
         try {
           await prisma.settlementItem.deleteMany({
             where: {
-              settlement: {
+              Settlement: {
                 settlementPeriodId: BigInt(periodId),
               },
             },
@@ -496,29 +496,29 @@ describe("Settlement System Utils", () => {
   it("적절한 데이터 관계를 가져야 한다", async () => {
     const settlement = await prisma.settlement.findFirst({
       include: {
-        seller: true,
-        settlementPeriod: true,
-        settlementItems: true,
+        sellers: true,
+        SettlementPeriod: true,
+        SettlementItem: true,
       },
     });
 
     if (settlement) {
-      expect(settlement.seller).toBeTruthy();
-      expect(settlement.settlementPeriod).toBeTruthy();
-      expect(Array.isArray(settlement.settlementItems)).toBe(true);
+      expect(settlement.sellers).toBeTruthy();
+      expect(settlement.SettlementPeriod).toBeTruthy();
+      expect(Array.isArray(settlement.SettlementItem)).toBe(true);
     }
   });
 
   it("정산 계산에서 데이터 무결성을 유지해야 한다", async () => {
     const settlement = await prisma.settlement.findFirst({
       include: {
-        settlementItems: true,
+        SettlementItem: true,
       },
     });
 
-    if (settlement && settlement.settlementItems.length > 0) {
+    if (settlement && settlement.SettlementItem.length > 0) {
       // 정산 항목들의 총액이 정산 총액과 일치하는지 확인
-      const itemsTotal = settlement.settlementItems.reduce(
+      const itemsTotal = settlement.SettlementItem.reduce(
         (sum, item) => sum + item.totalPrice,
         0
       );

@@ -264,7 +264,7 @@ class AdminDashboard {
       }),
       this.prisma.users.count({
         where: {
-          orders: {
+          Order: {
             some: {
               createdAt: {
                 gte: new Date(Date.now() - 30 * 24 * 60 * 60 * 1000),
@@ -294,10 +294,10 @@ class AdminDashboard {
           email: true,
           _count: {
             select: {
-              orders: true,
+              Order: true,
             },
           },
-          orders: {
+          Order: {
             select: {
               finalAmount: true,
             },
@@ -307,7 +307,7 @@ class AdminDashboard {
           },
         },
         orderBy: {
-          orders: {
+          Order: {
             _count: "desc",
           },
         },
@@ -320,14 +320,22 @@ class AdminDashboard {
         ? 0
         : ((newUsersThisMonth - lastMonthUsers) / lastMonthUsers) * 100;
 
-    const topUsersWithRevenue = topUsers.map((user) => ({
-      ...user,
-      totalRevenue: user.orders.reduce(
+    const topUsersWithRevenue = topUsers.map((user) => {
+      const totalRevenue = (user.Order || []).reduce(
         (sum, order) => sum + (order.finalAmount || 0),
         0
-      ),
-      orders: user._count.orders,
-    }));
+      );
+      const orders = user._count?.Order || 0;
+
+      // 필요한 필드만 반환 (Order, _count 제외)
+      return {
+        id: user.id,
+        user_name: user.user_name,
+        email: user.email,
+        totalRevenue,
+        orders,
+      };
+    });
 
     return {
       totalUsers,
@@ -343,6 +351,13 @@ class AdminDashboard {
    * 🏪 판매자 통계
    */
   async getSellerStats() {
+    // 먼저 상품이 있는 판매자 ID 목록을 가져옴
+    const sellersWithProducts = await this.prisma.product.findMany({
+      select: { sellerId: true },
+      distinct: ["sellerId"],
+    });
+    const sellerIdsWithProducts = sellersWithProducts.map((p) => p.sellerId);
+
     const [totalSellers, activeSellers, topSellers, sellerDistribution] =
       await Promise.all([
         this.prisma.sellers.count(),
@@ -350,12 +365,7 @@ class AdminDashboard {
         this.prisma.sellers.count({
           where: {
             id: {
-              in: await this.prisma.product
-                .findMany({
-                  select: { sellerId: true },
-                  distinct: ["sellerId"],
-                })
-                .then((products) => products.map((p) => p.sellerId)),
+              in: sellerIdsWithProducts,
             },
           },
         }),
@@ -673,13 +683,12 @@ class AdminDashboard {
           id: true,
           title: true,
           total_count: true,
-          _count: {
+          UserCoupon: {
+            where: {
+              used: true,
+            },
             select: {
-              userCoupons: {
-                where: {
-                  used: true,
-                },
-              },
+              id: true,
             },
           },
         },
@@ -691,18 +700,17 @@ class AdminDashboard {
           title: true,
           discount_amount: true,
           discount_mode: true,
-          _count: {
+          UserCoupon: {
+            where: {
+              used: true,
+            },
             select: {
-              userCoupons: {
-                where: {
-                  used: true,
-                },
-              },
+              id: true,
             },
           },
         },
         orderBy: {
-          userCoupons: {
+          UserCoupon: {
             _count: "desc",
           },
         },
@@ -718,10 +726,10 @@ class AdminDashboard {
         id: coupon.id,
         title: coupon.title,
         totalCount: coupon.total_count,
-        usedCount: coupon._count.userCoupons,
+        usedCount: coupon.UserCoupon.length,
         usageRate:
           coupon.total_count > 0
-            ? Math.round((coupon._count.userCoupons / coupon.total_count) * 100)
+            ? Math.round((coupon.UserCoupon.length / coupon.total_count) * 100)
             : 0,
       })),
       topCoupons: topCoupons.map((coupon) => ({
@@ -729,7 +737,7 @@ class AdminDashboard {
         title: coupon.title,
         discountAmount: coupon.discount_amount,
         discountMode: coupon.discount_mode,
-        usedCount: coupon._count.userCoupons,
+        usedCount: coupon.UserCoupon.length,
       })),
     };
   }

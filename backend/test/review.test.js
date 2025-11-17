@@ -11,7 +11,7 @@ let createdReviewId;
 
 beforeAll(async () => {
   // 테스트용 seller 생성
-  const seller = await prisma.seller.create({
+  const seller = await prisma.sellers.create({
     data: {
       name: "테스트 셀러",
       email: `seller-${Date.now()}@example.com`,
@@ -25,7 +25,7 @@ beforeAll(async () => {
   sellerId = seller.id;
 
   // 유저 생성
-  const user = await prisma.user.create({
+  const user = await prisma.users.create({
     data: {
       user_name: "리뷰 유저",
       email: `reviewer-${Date.now()}@example.com`,
@@ -53,7 +53,7 @@ beforeAll(async () => {
       saleEndDate: null,
       description: "리뷰 테스트용 상품입니다.",
       isSingleProduct: true,
-      prices: {
+      ProductPrice: {
         create: {
           originalPrice: 30000,
           salePrice: 25000,
@@ -61,7 +61,7 @@ beforeAll(async () => {
           flexzonePrice: 0,
         },
       },
-      delivery: {
+      ProductDelivery: {
         create: {
           originAddress: "서울시 강남구",
           deliveryMethod: "택배",
@@ -73,7 +73,7 @@ beforeAll(async () => {
           deliveryTime: "2~3일",
         },
       },
-      returns: {
+      ProductReturn: {
         create: {
           returnAddress: "서울시 강남구 반품센터",
           initialShippingFee: 0,
@@ -81,19 +81,19 @@ beforeAll(async () => {
           exchangeShippingFee: 3000,
         },
       },
-      images: {
+      ProductImage: {
         create: [
           { url: "https://cdn.com/image1.jpg", isMain: true, sortOrder: 1 },
         ],
       },
-      optionGroups: {
+      ProductOptionGroup: {
         create: [
           {
             name: "사이즈",
             displayName: "Size",
             required: true,
             sortOrder: 0,
-            options: {
+            ProductOptionValue: {
               create: [
                 {
                   value: "S",
@@ -121,7 +121,7 @@ beforeAll(async () => {
           },
         ],
       },
-      infoNotices: {
+      ProductInfoNotice: {
         create: [
           { name: "품명 및 모델명", value: "리뷰용 티셔츠" },
           { name: "제조국", value: "대한민국" },
@@ -137,39 +137,39 @@ afterAll(async () => {
   // 리뷰 삭제 (존재하면)
   if (createdReviewId) {
     // 리뷰 이미지 먼저 삭제
-    await prisma.reviewImage.deleteMany({
+    await prisma.ReviewImage.deleteMany({
       where: { reviewId: createdReviewId },
     });
     // 리뷰 삭제
-    await prisma.review.deleteMany({
+    await prisma.Review.deleteMany({
       where: { id: createdReviewId },
     });
   }
 
   // product의 자식 테이블(종속관계)부터 순서대로 삭제
   // 먼저 ProductOptionValue 삭제 (ProductOptionGroup을 참조)
-  await prisma.productOptionValue.deleteMany({
+  await prisma.ProductOptionValue.deleteMany({
     where: {
-      optionGroup: { productId },
+      ProductOptionGroup: { productId },
     },
   });
 
   // 그 다음 ProductOptionGroup 삭제
-  await prisma.productOptionGroup.deleteMany({ where: { productId } });
-  await prisma.productInfoNotice.deleteMany({ where: { productId } });
-  await prisma.productImage.deleteMany({ where: { productId } });
-  await prisma.productReturn.deleteMany({ where: { productId } });
-  await prisma.productDelivery.deleteMany({ where: { productId } });
-  await prisma.productPrice.deleteMany({ where: { productId } });
+  await prisma.ProductOptionGroup.deleteMany({ where: { productId } });
+  await prisma.ProductInfoNotice.deleteMany({ where: { productId } });
+  await prisma.ProductImage.deleteMany({ where: { productId } });
+  await prisma.ProductReturn.deleteMany({ where: { productId } });
+  await prisma.ProductDelivery.deleteMany({ where: { productId } });
+  await prisma.ProductPrice.deleteMany({ where: { productId } });
 
   // product 삭제
-  await prisma.product.deleteMany({ where: { id: productId } });
+  await prisma.Product.deleteMany({ where: { id: productId } });
 
   // user 삭제
-  await prisma.user.deleteMany({ where: { id: userId } });
+  await prisma.users.deleteMany({ where: { id: userId } });
 
   // 테스트용 seller 삭제
-  await prisma.seller.deleteMany({ where: { id: sellerId } });
+  await prisma.sellers.deleteMany({ where: { id: sellerId } });
 
   await prisma.$disconnect();
 });
@@ -243,7 +243,7 @@ describe("리뷰 API 테스트", () => {
     expect(res.body.message).toMatch(/삭제/);
 
     // 실제로 DB에서 삭제됐는지 확인
-    const deleted = await prisma.review.findUnique({
+    const deleted = await prisma.Review.findUnique({
       where: { id: createdReviewId },
     });
     expect(deleted).toBeNull();

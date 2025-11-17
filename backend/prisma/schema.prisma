@@ -11,7 +11,7 @@ model Cart {
   id        BigInt     @id @default(autoincrement())
   userId    BigInt
   createdAt DateTime   @default(now())
-  updatedAt DateTime
+  updatedAt DateTime     @updatedAt
   users     users      @relation(fields: [userId], references: [id])
   CartItem  CartItem[]
 
@@ -26,7 +26,7 @@ model CartItem {
   quantity   Int         @default(1)
   price      Float
   createdAt  DateTime    @default(now())
-  updatedAt  DateTime
+  updatedAt  DateTime     @updatedAt
   Cart       Cart        @relation(fields: [cartId], references: [id])
   Product    Product     @relation(fields: [productId], references: [id])
   ProductSKU ProductSKU? @relation(fields: [skuId], references: [id])
@@ -48,7 +48,7 @@ model CommissionPolicy {
   effectiveDate  DateTime
   endDate        DateTime?
   createdAt      DateTime  @default(now())
-  updatedAt      DateTime
+  updatedAt      DateTime               @updatedAt
   sellers        sellers?  @relation(fields: [sellerId], references: [id])
 
   @@index([categoryCode, isActive])
@@ -76,7 +76,7 @@ model Coupon {
   issued_partner_id BigInt?
   available_date    DateTime?
   createdAt         DateTime     @default(now())
-  updatedAt         DateTime
+  updatedAt         DateTime     @updatedAt
   sellers           sellers?     @relation(fields: [issued_partner_id], references: [id])
   Order             Order[]
   UserCoupon        UserCoupon[]
@@ -109,7 +109,7 @@ model FAQ {
   title      String
   content    String
   created_at DateTime @default(now())
-  updated_at DateTime
+  updated_at DateTime @updatedAt
 }
 
 model Inquiry {
@@ -137,7 +137,7 @@ model Notice {
   is_pinned  Boolean     @default(false)
   view_count Int         @default(0)
   created_at DateTime    @default(now())
-  updated_at DateTime
+  updated_at DateTime @updatedAt
 
   @@index([is_pinned, created_at])
   @@index([type])
@@ -165,7 +165,7 @@ model Order {
   paidAt         DateTime?
   usedCouponId   BigInt?
   createdAt      DateTime             @default(now())
-  updatedAt      DateTime
+  updatedAt      DateTime               @updatedAt
   Delivery       Delivery?
   Coupon         Coupon?              @relation(fields: [usedCouponId], references: [id])
   users          users                @relation(fields: [userId], references: [id])
@@ -188,7 +188,7 @@ model Delivery {
   estimatedDeliveryDate DateTime?
   actualDeliveryDate    DateTime?
   createdAt             DateTime        @default(now())
-  updatedAt             DateTime
+  updatedAt             DateTime     @updatedAt
   Order                 Order           @relation(fields: [orderId], references: [id])
 
   @@index([status])
@@ -234,7 +234,7 @@ model Product {
   saleEndDate          DateTime?
   description          String
   createdAt            DateTime               @default(now())
-  updatedAt            DateTime
+  updatedAt            DateTime               @updatedAt
   refundNotice         String?                @db.Text
   isSingleProduct      Boolean                @default(true)
   CartItem             CartItem[]
@@ -362,7 +362,7 @@ model ProductSKU {
   weight           Float?
   barcode          String?
   createdAt        DateTime           @default(now())
-  updatedAt        DateTime
+  updatedAt        DateTime @updatedAt
   CartItem         CartItem[]
   OrderItem        OrderItem[]
   Product          Product            @relation(fields: [productId], references: [id])
@@ -392,7 +392,7 @@ model Review {
   rating      Int
   content     String
   createdAt   DateTime      @default(now())
-  updatedAt   DateTime
+  updatedAt   DateTime @updatedAt
   Product     Product       @relation(fields: [productId], references: [id])
   users       users         @relation(fields: [userId], references: [id])
   ReviewImage ReviewImage[]
@@ -429,7 +429,7 @@ model Settlement {
   settledAt             DateTime?
   memo                  String?           @db.Text
   createdAt             DateTime          @default(now())
-  updatedAt             DateTime
+  updatedAt             DateTime     @updatedAt
   sellers               sellers           @relation(fields: [sellerId], references: [id])
   SettlementPeriod      SettlementPeriod  @relation(fields: [settlementPeriodId], references: [id])
   SettlementItem        SettlementItem[]
@@ -470,7 +470,7 @@ model SettlementPeriod {
   settlementDate DateTime
   status         SettlementPeriod_status     @default(PREPARING)
   createdAt      DateTime                    @default(now())
-  updatedAt      DateTime
+  updatedAt      DateTime               @updatedAt
   Settlement     Settlement[]
 
   @@index([periodType, startDate, endDate])
@@ -500,7 +500,7 @@ model UserGuide {
   is_pinned  Boolean  @default(false)
   view_count Int      @default(0)
   created_at DateTime @default(now())
-  updated_at DateTime
+  updated_at DateTime @updatedAt
 }
 
 model UserLikeProduct {
@@ -540,7 +540,7 @@ model banners {
   ownerType    banners_ownerType
   ownerId      String
   createdAt    DateTime          @default(now())
-  updatedAt    DateTime
+  updatedAt    DateTime     @updatedAt
 }
 
 model email_verifications {
@@ -593,7 +593,7 @@ model user_addresses {
   isDefault  Boolean  @default(false)
   memo       String?  @db.VarChar(255)
   created_at DateTime @default(now())
-  updated_at DateTime
+  updated_at DateTime @updatedAt
   users      users    @relation(fields: [userId], references: [id])
 
   @@index([userId])
@@ -637,7 +637,7 @@ model users {
   phone                String?                @db.VarChar(20)
   mileage              Int                    @default(0)
   created_at           DateTime               @default(now())
-  updated_at           DateTime
+  updated_at           DateTime               @updatedAt
   Cart                 Cart[]
   Order                Order[]
   Review               Review[]

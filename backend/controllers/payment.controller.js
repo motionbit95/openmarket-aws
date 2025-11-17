@@ -36,13 +36,13 @@ exports.requestInicisPayment = async (req, res) => {
     const inicisPayment = new InicisPayment();
 
     // 주문 정보 조회
-    const order = await prisma.order.findUnique({
+    const order = await prisma.Order.findUnique({
       where: { id: parsedOrderId },
       include: {
-        user: true,
-        orderItems: {
+        users: true,
+        OrderItem: {
           include: {
-            product: true
+            Product: true
           }
         }
       }
@@ -58,10 +58,10 @@ exports.requestInicisPayment = async (req, res) => {
 
     // 상품명 구성
     let goodsName;
-    if (order.orderItems.length === 1) {
-      goodsName = order.orderItems[0].productName;
+    if (order.OrderItem.length === 1) {
+      goodsName = order.OrderItem[0].productName;
     } else {
-      goodsName = `${order.orderItems[0].productName} 외 ${order.orderItems.length - 1}건`;
+      goodsName = `${order.OrderItem[0].productName} 외 ${order.OrderItem.length - 1}건`;
     }
 
     // 이니시스 테스트 모드용 고정 데이터 사용 (타임스탬프만 현재 시간)
@@ -82,7 +82,7 @@ exports.requestInicisPayment = async (req, res) => {
     });
 
     // 결제 요청 로그 저장
-    await prisma.order.update({
+    await prisma.Order.update({
       where: { id: parsedOrderId },
       data: {
         paymentMethod: paymentMethod
@@ -138,7 +138,7 @@ exports.handleInicisCallback = async (req, res) => {
     }
 
     // 3. 주문번호로 주문 조회
-    const order = await prisma.order.findFirst({
+    const order = await prisma.Order.findFirst({
       where: { orderNumber: P_OID }
     });
 
@@ -202,7 +202,7 @@ exports.handleInicisCallback = async (req, res) => {
 
     } else {
       // 결제 실패
-      await prisma.order.update({
+      await prisma.Order.update({
         where: { id: order.id },
         data: {
           paymentStatus: 'FAILED',
@@ -253,12 +253,12 @@ exports.requestInicisNetCancel = async (req, res) => {
 
     if (cancelResult.P_STATUS === '00') {
       // 망취소 성공 - 주문 상태를 취소로 변경
-      const order = await prisma.order.findFirst({
+      const order = await prisma.Order.findFirst({
         where: { orderNumber: P_OID }
       });
 
       if (order) {
-        await prisma.order.update({
+        await prisma.Order.update({
           where: { id: order.id },
           data: {
             paymentStatus: 'CANCELLED',
@@ -267,7 +267,7 @@ exports.requestInicisNetCancel = async (req, res) => {
         });
 
         // 재고 복원
-        const orderItems = await prisma.orderItem.findMany({
+        const orderItems = await prisma.OrderItem.findMany({
           where: { orderId: order.id }
         });
 
@@ -338,12 +338,12 @@ exports.approvePayment = async (req, res) => {
     const parsedOrderId = parseBigIntId(orderId);
 
     // 주문 조회
-    const order = await prisma.order.findUnique({
+    const order = await prisma.Order.findUnique({
       where: { id: parsedOrderId },
       include: {
-        orderItems: {
+        OrderItem: {
           include: {
-            product: true
+            Product: true
           }
         }
       }
@@ -381,7 +381,7 @@ exports.approvePayment = async (req, res) => {
       });
 
       // 상품 재고 차감 (실제 프로덕션에서는 재고 관리 로직 필요)
-      for (const orderItem of order.orderItems) {
+      for (const orderItem of order.OrderItem) {
         await tx.product.update({
           where: { id: orderItem.productId },
           data: {
@@ -416,7 +416,7 @@ exports.failPayment = async (req, res) => {
   try {
     const parsedOrderId = parseBigIntId(orderId);
 
-    const updatedOrder = await prisma.order.update({
+    const updatedOrder = await prisma.Order.update({
       where: { id: parsedOrderId },
       data: {
         paymentStatus: 'FAILED',
@@ -446,12 +446,12 @@ exports.refundPayment = async (req, res) => {
     const parsedOrderId = parseBigIntId(orderId);
 
     // 주문 조회
-    const order = await prisma.order.findUnique({
+    const order = await prisma.Order.findUnique({
       where: { id: parsedOrderId },
       include: {
-        orderItems: {
+        OrderItem: {
           include: {
-            product: true
+            Product: true
           }
         }
       }
@@ -482,7 +482,7 @@ exports.refundPayment = async (req, res) => {
       });
 
       // 재고 복원
-      for (const orderItem of order.orderItems) {
+      for (const orderItem of order.OrderItem) {
         await tx.product.update({
           where: { id: orderItem.productId },
           data: {
@@ -530,7 +530,7 @@ exports.getPaymentInfo = async (req, res) => {
     const { orderId } = req.params;
     const parsedOrderId = parseBigIntId(orderId);
 
-    const order = await prisma.order.findUnique({
+    const order = await prisma.Order.findUnique({
       where: { id: parsedOrderId },
       select: {
         id: true,

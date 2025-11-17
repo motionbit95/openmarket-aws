@@ -11,7 +11,7 @@ describe("상품 V2 API 테스트", () => {
 
   beforeAll(async () => {
     // 테스트용 판매자 생성
-    testSeller = await prisma.seller.create({
+    testSeller = await prisma.sellers.create({
       data: {
         name: "상품V2테스트판매자",
         email: `product_v2_seller_${Date.now()}@test.com`,
@@ -43,12 +43,12 @@ describe("상품 V2 API 테스트", () => {
     if (optionProduct) {
       await prisma.productOptionValue.deleteMany({
         where: {
-          optionGroup: {
+          ProductOptionGroup: {
             productId: optionProduct.id,
           },
         },
       });
-      await prisma.productOptionGroup.deleteMany({
+      await prisma.ProductOptionGroup.deleteMany({
         where: { productId: optionProduct.id },
       });
       await prisma.productPrice.deleteMany({
@@ -67,7 +67,7 @@ describe("상품 V2 API 테스트", () => {
       await prisma.product.delete({ where: { id: singleProduct.id } });
     }
 
-    await prisma.seller.delete({ where: { id: testSeller.id } });
+    await prisma.sellers.delete({ where: { id: testSeller.id } });
   });
 
   describe("단일상품 생성 및 관리", () => {
@@ -86,7 +86,7 @@ describe("상품 V2 API 테스트", () => {
         stockQuantity: 50,
         description: "V2 단일상품 테스트 설명",
         isSingleProduct: true,
-        prices: {
+        ProductPrice: {
           originalPrice: 25000,
           salePrice: 22000,
           discountRate: 12,
@@ -135,7 +135,7 @@ describe("상품 V2 API 테스트", () => {
         displayStatus: "DISPLAYED",
         description: "V2 옵션상품 테스트 - 다양한 색상과 사이즈",
         isSingleProduct: false,
-        prices: {
+        ProductPrice: {
           originalPrice: 30000,
           salePrice: 25000,
           discountRate: 16.7,

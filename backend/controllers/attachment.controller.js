@@ -70,7 +70,7 @@ exports.uploadAttachments = async (req, res) => {
       const fileUrl = `https://${process.env.MY_AWS_S3_BUCKET_NAME}.s3.${process.env.MY_AWS_REGION}.amazonaws.com/${key}`;
 
       // Prisma DB 저장 (filename은 원본 한글 그대로)
-      const created = await prisma.attachment.create({
+      const created = await prisma.attachments.create({
         data: {
           target_type: type,
           target_id: BigInt(id),
@@ -196,7 +196,7 @@ exports.uploadOptimizedImages = async (req, res) => {
         await Promise.all(uploadPromises);
 
         // DB에 모든 이미지 정보 저장
-        const createdAttachments = await prisma.attachment.createMany({
+        const createdAttachments = await prisma.attachments.createMany({
           data: dbInsertData
         });
 
@@ -375,7 +375,7 @@ exports.deleteAttachment = async (req, res) => {
     }
 
     // 1. DB에서 첨부파일 정보 조회
-    const attachments = await prisma.attachment.findMany({
+    const attachments = await prisma.attachments.findMany({
       where: {
         id: { in: ids.map((id) => BigInt(id)) },
       },
@@ -403,7 +403,7 @@ exports.deleteAttachment = async (req, res) => {
     await Promise.all(deleteS3Promises);
 
     // 3. DB에서 레코드 삭제
-    await prisma.attachment.deleteMany({
+    await prisma.attachments.deleteMany({
       where: {
         id: { in: ids.map((id) => BigInt(id)) },
       },

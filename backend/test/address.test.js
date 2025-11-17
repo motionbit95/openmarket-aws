@@ -11,7 +11,7 @@ describe("배송지 API 테스트", () => {
     const { PrismaClient } = require("@prisma/client");
     const prisma = new PrismaClient();
     // 임시 유저 생성
-    const user = await prisma.user.create({
+    const user = await prisma.users.create({
       data: {
         user_name: "Test User",
         email: `testuser_${Date.now()}@example.com`,
@@ -27,11 +27,11 @@ describe("배송지 API 테스트", () => {
     const { PrismaClient } = require("@prisma/client");
     const prisma = new PrismaClient();
     // 주소 먼저 삭제
-    await prisma.userAddress.deleteMany({
+    await prisma.user_addresses.deleteMany({
       where: { userId: BigInt(testUserId) },
     });
     // 유저 삭제
-    await prisma.user.deleteMany({
+    await prisma.users.deleteMany({
       where: { id: BigInt(testUserId) },
     });
     await prisma.$disconnect();

@@ -12,7 +12,7 @@ describe("장바구니 API 테스트", () => {
 
   beforeAll(async () => {
     // 1. 테스트용 판매자 생성
-    seller = await prisma.seller.create({
+    seller = await prisma.sellers.create({
       data: {
         name: "테스트셀러",
         email: `test-seller-${Date.now()}@example.com`,
@@ -25,7 +25,7 @@ describe("장바구니 API 테스트", () => {
     });
 
     // 2. 테스트용 유저 생성
-    user = await prisma.user.create({
+    user = await prisma.users.create({
       data: {
         user_name: `test-user-${Date.now()}`,
         email: `test-user-${Date.now()}@example.com`,
@@ -51,7 +51,7 @@ describe("장바구니 API 테스트", () => {
         saleStartDate: new Date(),
         description: "테스트용 상품입니다.",
         isSingleProduct: false,
-        prices: {
+        ProductPrice: {
           create: {
             originalPrice: 10000,
             salePrice: 9000,
@@ -63,14 +63,14 @@ describe("장바구니 API 테스트", () => {
     });
 
     // 4. 옵션 그룹 생성
-    const optionGroup = await prisma.productOptionGroup.create({
+    const optionGroup = await prisma.ProductOptionGroup.create({
       data: {
         productId: product.id,
         name: "색상",
         displayName: "Color",
         required: true,
         sortOrder: 0,
-        options: {
+        ProductOptionValue: {
           create: [
             {
               value: "RED",
@@ -90,22 +90,22 @@ describe("장바구니 API 테스트", () => {
         },
       },
       include: {
-        options: true,
+        ProductOptionValue: true,
       },
     });
 
     // 첫 번째 옵션 값을 option으로 저장
-    option = optionGroup.options[0];
+    option = optionGroup.ProductOptionValue[0];
   });
 
   afterAll(async () => {
     // 장바구니/아이템 삭제
-    await prisma.cartItem.deleteMany({
+    await prisma.CartItem.deleteMany({
       where: {
-        cart: { userId: user.id },
+        Cart: { userId: user.id },
       },
     });
-    await prisma.cart.deleteMany({
+    await prisma.Cart.deleteMany({
       where: { userId: user.id },
     });
 
@@ -113,18 +113,18 @@ describe("장바구니 API 테스트", () => {
     // 먼저 ProductOptionValue 삭제 (ProductOptionGroup을 참조)
     await prisma.productOptionValue.deleteMany({
       where: {
-        optionGroup: { productId: product.id },
+        ProductOptionGroup: { productId: product.id },
       },
     });
 
     // 그 다음 ProductOptionGroup 삭제
-    await prisma.productOptionGroup.deleteMany({
+    await prisma.ProductOptionGroup.deleteMany({
       where: { productId: product.id },
     });
     await prisma.productPrice.deleteMany({ where: { productId: product.id } });
     await prisma.product.deleteMany({ where: { id: product.id } });
-    await prisma.user.deleteMany({ where: { id: user.id } });
-    await prisma.seller.deleteMany({ where: { id: seller.id } });
+    await prisma.users.deleteMany({ where: { id: user.id } });
+    await prisma.sellers.deleteMany({ where: { id: seller.id } });
 
     await prisma.$disconnect();
   });
